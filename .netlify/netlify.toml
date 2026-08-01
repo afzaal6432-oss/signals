@@ -1,0 +1,27 @@
+plugins = []
+headers = []
+redirects = []
+
+[functions]
+
+[functions."*"]
+
+[build]
+publish = "Q:\\quotex_signal_app\\clients\\web"
+publishOrigin = "config"
+commandOrigin = "ui"
+base = "Q:\\quotex_signal_app\\clients\\web"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]

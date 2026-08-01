@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quotex Signal App — Admin</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #262b36; --text: #e8eaed;
+    --muted: #8b92a4; --accent: #4f8cff; --green: #35c46a; --red: #ff5a5a;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+         margin: 0; padding: 32px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .gate, .panel { max-width: 900px; margin: 0 auto; }
+  .gate { max-width: 380px; margin-top: 80px; text-align: center; }
+  input, button, select { font-size: 14px; padding: 9px 12px; border-radius: 8px;
+         border: 1px solid var(--border); background: #1d212b; color: var(--text); }
+  input { width: 100%; margin-bottom: 10px; }
+  button { background: var(--accent); border: none; cursor: pointer; font-weight: 600; }
+  button:hover { opacity: 0.9; }
+  button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  button.danger { background: var(--red); }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+          padding: 20px; margin-bottom: 20px; }
+  .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 140px; }
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; }
+  .status-active { color: var(--green); font-weight: 600; }
+  .status-revoked { color: var(--red); font-weight: 600; }
+  .new-key { background: #14251c; border: 1px solid var(--green); border-radius: 8px;
+             padding: 14px; margin-top: 12px; font-family: monospace; font-size: 15px; }
+  .error { color: var(--red); font-size: 13px; margin-top: 8px; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .actions button { padding: 5px 10px; font-size: 12px; margin-right: 6px; }
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <h1>Admin Login</h1>
+  <div class="sub">Enter the admin secret configured in config.yaml</div>
+  <input id="secretInput" type="password" placeholder="Admin secret">
+  <button onclick="login()" style="width:100%">Enter</button>
+  <div id="gateError" class="error"></div>
+</div>
+
+<div id="panel" class="panel" style="display:none">
+  <div class="toolbar">
+    <div>
+      <h1>Quotex Signal App — License Admin</h1>
+      <div class="sub">Backend: <span id="backendUrl"></span></div>
+    </div>
+    <button class="secondary" onclick="logout()">Log out</button>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Generate a new key</h3>
+    <div class="row">
+      <div>
+        <label>Label (e.g. customer email)</label>
+        <input id="genLabel" placeholder="customer@example.com">
+      </div>
+      <div>
+        <label>Expires in (days, 0 = never)</label>
+        <input id="genDays" type="number" value="30">
+      </div>
+      <div>
+        <label>Max concurrent sessions</label>
+        <input id="genSessions" type="number" placeholder="default from config">
+      </div>
+      <div style="flex: 0 0 auto">
+        <button onclick="generateKey()">Generate</button>
+      </div>
+    </div>
+    <div id="newKeyBox"></div>
+    <div id="genError" class="error"></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <h3 style="margin:0">Saved keys by name</h3>
+      <button class="secondary" onclick="loadKeyRegistry()">Refresh</button>
+    </div>
+    <div class="sub">Every key ever issued, searchable by name -- no more one-time popups. See ADMIN_GUIDE.md for the security tradeoff this represents.</div>
+    <div class="row" style="margin:10px 0">
+      <div>
+        <input id="registrySearchInput" placeholder="Search by name..." onkeydown="if(event.key==='Enter')searchKeyRegistry()">
+      </div>
+      <div style="flex: 0 0 auto">
+        <button class="secondary" onclick="searchKeyRegistry()">Search</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Key</th><th>Source</th><th>Issued</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="keyRegistryBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <h3 style="margin:0">All keys</h3>
+      <button class="secondary" onclick="loadKeys()">Refresh</button>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <div>
+        <input id="keySearchInput" placeholder="Search by customer name or email..." onkeydown="if(event.key==='Enter')searchKeysByName()">
+      </div>
+      <div style="flex: 0 0 auto">
+        <button class="secondary" onclick="searchKeysByName()">Search</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Label</th><th>Status</th><th>Expires</th><th>Max sessions</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="keysBody"></tbody>
+    </table>
+    <div id="listError" class="error"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Extend a key</h3>
+    <div class="row">
+      <div>
+        <label>License key</label>
+        <input id="extendKey" placeholder="QX-XXXX-XXXX-XXXX-XXXX">
+      </div>
+      <div>
+        <label>Additional days</label>
+        <input id="extendDays" type="number" value="30">
+      </div>
+      <div style="flex: 0 0 auto">
+        <button onclick="extendKey()">Extend</button>
+      </div>
+    </div>
+    <div id="extendError" class="error"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Site notice banner</h3>
+    <div class="sub">Shown at the top of the app for everyone (e.g. "Server under maintenance, back by 5pm"). Leave empty to hide it.</div>
+    <div class="row" style="margin-top:10px">
+      <div>
+        <input id="siteNoticeInput" placeholder="Leave empty for no notice">
+      </div>
+      <div style="flex: 0 0 auto">
+        <button onclick="updateSiteNotice()">Update</button>
+      </div>
+    </div>
+    <div id="siteNoticeSuccess" style="color:var(--green);font-size:13px;margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Market data API key</h3>
+    <div class="sub">Current: <span id="currentKeyMasked">loading...</span></div>
+    <div class="row" style="margin-top:10px">
+      <div>
+        <label>New Twelve Data API key</label>
+        <input id="newApiKey" type="password" placeholder="Paste new key here">
+      </div>
+      <div style="flex: 0 0 auto">
+        <button onclick="updateApiKey()">Update — takes effect immediately</button>
+      </div>
+    </div>
+    <div id="apiKeyError" class="error"></div>
+    <div id="apiKeySuccess" style="color:var(--green);font-size:13px;margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <h3 style="margin:0">Pending payment requests</h3>
+      <button class="secondary" onclick="loadPaymentRequests()">Refresh</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Contact</th><th>Plan</th><th>Note</th><th>Voucher</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="paymentRequestsBody"></tbody>
+    </table>
+    <div id="paymentRequestsError" class="error"></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <h3 style="margin:0">Paddle card-payment orders</h3>
+      <button class="secondary" onclick="loadPaddleOrders()">Refresh</button>
+    </div>
+    <div class="sub">Not set up yet? These stay empty until you configure Paddle — see ADMIN_GUIDE.md.</div>
+    <table>
+      <thead>
+        <tr><th>Email</th><th>Plan</th><th>Key</th><th>Delivered?</th></tr>
+      </thead>
+      <tbody id="paddleOrdersBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Detect "local preview" (file://, or any localhost/127.0.0.1 port —
+  // covers PyCharm's preview server, python -m http.server, etc.) and
+  // fall back to the tunnel URL in that case. On a real deployment
+  // (Netlify), window.location.origin IS the right backend-relative
+  // Render gives you ONE fixed URL for the life of the service — no more
+  // tunnel URLs that change on every restart. Set this once, right after
+  // your first Render deploy, and you should never need to touch it again.
+  const BACKEND = "https://quotex-signal-backend.onrender.com";
+  document.getElementById("backendUrl").textContent = BACKEND;
+
+  function getSecret() { return sessionStorage.getItem("qx_admin_secret"); }
+
+  async function api(path, opts = {}) {
+    const secret = getSecret();
+    const res = await fetch(BACKEND + path, {
+      ...opts,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Secret": secret || "",
+        ...(opts.headers || {}),
+      },
+    });
+    if (res.status === 401) {
+      logout();
+      throw new Error("Session expired or invalid secret — please log in again.");
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
+    return data;
+  }
+
+  async function login() {
+    const secret = document.getElementById("secretInput").value.trim();
+    if (!secret) return;
+    sessionStorage.setItem("qx_admin_secret", secret);
+    document.getElementById("gateError").textContent = "";
+    try {
+      await loadKeys(); // validates the secret against a real endpoint
+      await loadApiKeyStatus();
+      await loadPaymentRequests();
+      await loadPaddleOrders();
+      await loadSiteNotice();
+      await loadKeyRegistry();
+      document.getElementById("gate").style.display = "none";
+      document.getElementById("panel").style.display = "block";
+    } catch (e) {
+      sessionStorage.removeItem("qx_admin_secret");
+      document.getElementById("gateError").textContent = e.message;
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem("qx_admin_secret");
+    document.getElementById("panel").style.display = "none";
+    document.getElementById("gate").style.display = "block";
+  }
+
+  async function loadPaddleOrders() {
+    try {
+      const data = await api("/admin/paddle-orders");
+      const rows = data.orders.map(o => `
+        <tr>
+          <td>${o.email}</td>
+          <td>${o.plan_days} days</td>
+          <td style="font-family:monospace">${o.license_key}</td>
+          <td>${o.delivered ? "yes" : `no — send it! <button class="secondary" style="padding:4px 8px;font-size:11px;margin-left:6px" onclick="markPaddleDelivered('${o.id}')">Mark delivered</button>`}</td>
+        </tr>`).join("");
+      document.getElementById("paddleOrdersBody").innerHTML =
+        rows || `<tr><td colspan="4">No orders yet.</td></tr>`;
+    } catch (e) {
+      document.getElementById("paddleOrdersBody").innerHTML =
+        `<tr><td colspan="4">Not available yet</td></tr>`;
+    }
+  }
+
+  async function markPaddleDelivered(orderId) {
+    try {
+      await api("/admin/paddle-orders/mark-delivered", {
+        method: "POST", body: JSON.stringify({ request_id: orderId })
+      });
+      await loadPaddleOrders();
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function loadPaymentRequests() {
+    document.getElementById("paymentRequestsError").textContent = "";
+    try {
+      const data = await api("/admin/payment-requests");
+      const pending = data.requests.filter(r => r.status === "pending");
+      const rows = pending.map(r => `
+        <tr>
+          <td>${r.name}</td>
+          <td>${r.contact}</td>
+          <td>${r.plan_days} days</td>
+          <td>${r.transaction_note || "<em>(none)</em>"}</td>
+          <td>${r.voucher_filename ? `<button class="secondary" style="padding:4px 8px;font-size:11px" onclick="viewVoucher('${r.voucher_filename}')">View</button>` : "<em>none</em>"}</td>
+          <td class="actions">
+            <button onclick="approveRequest('${r.id}')">Approve &amp; generate key</button>
+            <button class="secondary" onclick="dismissRequest('${r.id}')">Dismiss</button>
+          </td>
+        </tr>`).join("");
+      document.getElementById("paymentRequestsBody").innerHTML =
+        rows || `<tr><td colspan="6">No pending requests.</td></tr>`;
+    } catch (e) {
+      document.getElementById("paymentRequestsError").textContent = e.message;
+    }
+  }
+
+  async function viewVoucher(filename) {
+    try {
+      const secret = getSecret();
+      const res = await fetch(`${BACKEND}/admin/payment-requests/voucher/${filename}`, {
+        headers: { "X-Admin-Secret": secret || "" },
+      });
+      if (!res.ok) throw new Error("Could not load voucher image.");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function approveRequest(id) {
+    try {
+      const data = await api("/admin/payment-requests/approve", {
+        method: "POST", body: JSON.stringify({ request_id: id })
+      });
+      alert(`Key generated: ${data.key}\n\nCopy this now and send it to: ${data.deliver_to}\n(This is shown once — it won't be retrievable again.)`);
+      await loadPaymentRequests();
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function dismissRequest(id) {
+    if (!confirm("Dismiss this request without generating a key?")) return;
+    try {
+      await api("/admin/payment-requests/dismiss", {
+        method: "POST", body: JSON.stringify({ request_id: id })
+      });
+      await loadPaymentRequests();
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function loadSiteNotice() {
+    try {
+      const data = await api("/admin/config/site-notice");
+      document.getElementById("siteNoticeInput").value = data.message || "";
+    } catch (e) { /* non-critical */ }
+  }
+
+  async function updateSiteNotice() {
+    const successEl = document.getElementById("siteNoticeSuccess");
+    successEl.textContent = "";
+    const message = document.getElementById("siteNoticeInput").value.trim();
+    try {
+      await api("/admin/config/site-notice", {
+        method: "POST", body: JSON.stringify({ message })
+      });
+      successEl.textContent = message ? "Notice is now live on the app." : "Notice cleared.";
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function loadApiKeyStatus() {
+    try {
+      const data = await api("/admin/config/market-data-key");
+      document.getElementById("currentKeyMasked").textContent = data.masked_key;
+    } catch (e) {
+      document.getElementById("currentKeyMasked").textContent = "error loading";
+    }
+  }
+
+  async function updateApiKey() {
+    document.getElementById("apiKeyError").textContent = "";
+    document.getElementById("apiKeySuccess").textContent = "";
+    const newKey = document.getElementById("newApiKey").value.trim();
+    if (!newKey) return;
+    try {
+      const data = await api("/admin/config/market-data-key", {
+        method: "POST", body: JSON.stringify({ api_key: newKey })
+      });
+      document.getElementById("currentKeyMasked").textContent = data.masked_key;
+      document.getElementById("apiKeySuccess").textContent =
+        "Updated — the live feed will use this on its next request, no restart needed.";
+      document.getElementById("newApiKey").value = "";
+    } catch (e) {
+      document.getElementById("apiKeyError").textContent = e.message;
+    }
+  }
+
+  async function loadKeys(searchQuery) {
+    document.getElementById("listError").textContent = "";
+    try {
+      const endpoint = searchQuery
+        ? `/admin/keys/search?q=${encodeURIComponent(searchQuery)}`
+        : "/admin/keys";
+      const data = await api(endpoint);
+      const rows = data.keys.map(k => `
+        <tr>
+          <td>${k.id}</td>
+          <td>${k.label || "<em>(none)</em>"}</td>
+          <td class="${k.revoked ? 'status-revoked' : 'status-active'}">${k.revoked ? 'REVOKED' : 'active'}</td>
+          <td>${k.expires_at ? new Date(k.expires_at).toLocaleDateString() : 'never'}</td>
+          <td>${k.max_concurrent_sessions}</td>
+          <td class="actions">
+            <button class="secondary" onclick="revokeById(${k.id})">Revoke</button>
+            <button class="secondary" onclick="reactivateById(${k.id})">Reactivate</button>
+            <button class="secondary" onclick="extendById(${k.id})">Extend</button>
+          </td>
+        </tr>`).join("");
+      document.getElementById("keysBody").innerHTML = rows || `<tr><td colspan="6">No keys found.</td></tr>`;
+    } catch (e) {
+      document.getElementById("listError").textContent = e.message;
+      throw e;
+    }
+  }
+
+  function searchKeysByName() {
+    const q = document.getElementById("keySearchInput").value.trim();
+    loadKeys(q || undefined);
+  }
+
+  // No plaintext key needed anymore — act directly by the ID shown in
+  // the table (which you can find by name using the search box above it).
+  async function revokeById(id) {
+    if (!confirm(`Revoke license #${id}? This blocks access immediately.`)) return;
+    try {
+      await api("/admin/keys/revoke-by-id", { method: "POST", body: JSON.stringify({ license_id: id }) });
+      await loadKeys(document.getElementById("keySearchInput").value.trim() || undefined);
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function reactivateById(id) {
+    try {
+      await api("/admin/keys/reactivate-by-id", { method: "POST", body: JSON.stringify({ license_id: id }) });
+      await loadKeys(document.getElementById("keySearchInput").value.trim() || undefined);
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function extendById(id) {
+    const daysStr = prompt("Extend by how many days?", "30");
+    if (!daysStr) return;
+    const additional_days = parseInt(daysStr, 10);
+    if (!Number.isFinite(additional_days) || additional_days <= 0) {
+      alert("Enter a positive number of days.");
+      return;
+    }
+    try {
+      const data = await api("/admin/keys/extend-by-id", {
+        method: "POST", body: JSON.stringify({ license_id: id, additional_days })
+      });
+      alert(`New expiry: ${new Date(data.new_expiry).toLocaleString()}`);
+      await loadKeys(document.getElementById("keySearchInput").value.trim() || undefined);
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function loadKeyRegistry(query) {
+    try {
+      const q = query !== undefined ? query : "";
+      const data = await api(`/admin/key-registry?q=${encodeURIComponent(q)}`);
+      const rows = data.entries.map(e => `
+        <tr>
+          <td>${e.name}</td>
+          <td style="font-family:monospace">${e.key}</td>
+          <td style="font-size:11px;color:var(--muted)">${e.source}</td>
+          <td>${new Date(e.created_at * 1000).toLocaleDateString()}</td>
+          <td class="actions">
+            <button class="secondary" onclick="deleteRegistryEntry(${e.license_id})">Remove from list</button>
+          </td>
+        </tr>`).join("");
+      document.getElementById("keyRegistryBody").innerHTML =
+        rows || `<tr><td colspan="5">No saved keys yet.</td></tr>`;
+    } catch (e) {
+      document.getElementById("keyRegistryBody").innerHTML = `<tr><td colspan="5">Error loading.</td></tr>`;
+    }
+  }
+
+  function searchKeyRegistry() {
+    loadKeyRegistry(document.getElementById("registrySearchInput").value.trim());
+  }
+
+  async function deleteRegistryEntry(licenseId) {
+    if (!confirm("Remove this key from the saved list? (This does NOT revoke the license itself -- use Revoke in 'All keys' for that.)")) return;
+    try {
+      await api("/admin/key-registry/delete", { method: "POST", body: JSON.stringify({ license_id: licenseId }) });
+      await loadKeyRegistry(document.getElementById("registrySearchInput").value.trim());
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
+  async function generateKey() {
+    document.getElementById("genError").textContent = "";
+    document.getElementById("newKeyBox").innerHTML = "";
+    const label = document.getElementById("genLabel").value.trim();
+    const days = parseInt(document.getElementById("genDays").value || "30", 10);
+    const sessionsRaw = document.getElementById("genSessions").value.trim();
+    const body = {
+      label,
+      expires_in_days: days,
+      max_concurrent_sessions: sessionsRaw ? parseInt(sessionsRaw, 10) : null,
+    };
+    try {
+      const data = await api("/admin/keys/generate", { method: "POST", body: JSON.stringify(body) });
+      document.getElementById("newKeyBox").innerHTML =
+        `<div class="new-key">${data.key}<br><span style="font-family:-apple-system;font-size:12px;color:var(--muted)">
+         ${data.warning} Copy it before refreshing.</span></div>`;
+      await loadKeys();
+      await loadKeyRegistry();
+    } catch (e) {
+      document.getElementById("genError").textContent = e.message;
+    }
+  }
+
+  async function extendKey() {
+    document.getElementById("extendError").textContent = "";
+    const key = document.getElementById("extendKey").value.trim();
+    const additional_days = parseInt(document.getElementById("extendDays").value || "0", 10);
+    if (!key) return;
+    try {
+      const data = await api("/admin/keys/extend", { method: "POST", body: JSON.stringify({ key, additional_days }) });
+      alert(`New expiry: ${new Date(data.new_expiry).toLocaleString()}`);
+      await loadKeys();
+    } catch (e) {
+      document.getElementById("extendError").textContent = e.message;
+    }
+  }
+
+  // Auto-login if a secret is already stored for this browser session.
+  if (getSecret()) {
+    loadKeys().then(() => {
+      document.getElementById("gate").style.display = "none";
+      document.getElementById("panel").style.display = "block";
+      loadApiKeyStatus();
+      loadPaymentRequests();
+      loadPaddleOrders();
+      loadSiteNotice();
+      loadKeyRegistry();
+    }).catch(() => {});
+  }
+</script>
+</body>
+</html>

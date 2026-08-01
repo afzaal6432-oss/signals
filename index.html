@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<title>Quotex Signal Generator</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #262b36; --text: #e8eaed;
+    --muted: #8b92a4; --accent: #4f8cff; --green: #35c46a; --red: #ff5a5a; --amber: #e3b23c;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  /* ---------- Crystal / glass theme + animated background ---------- */
+  #bgLayer {
+    position: fixed; inset: 0; z-index: -1; overflow: hidden;
+    background: var(--bg);
+    background-size: cover; background-position: center;
+  }
+  #bgLayer.theme-nebula { background-image: linear-gradient(-45deg, #0f1115, #1a1440, #0f1115, #142238); background-size: 400% 400%; animation: bgShift 18s ease infinite; }
+  #bgLayer.theme-market { background-image: linear-gradient(-45deg, #0f1115, #103a2b, #0f1115, #0f2a3a); background-size: 400% 400%; animation: bgShift 18s ease infinite; }
+  #bgLayer.theme-ember  { background-image: linear-gradient(-45deg, #150f0f, #3a1414, #150f0f, #331a0a); background-size: 400% 400%; animation: bgShift 18s ease infinite; }
+  #bgLayer.theme-mono   { background: var(--bg); }
+  #bgLayer.theme-custom { animation: none; }
+  #bgLayer::after {
+    /* faint reticle/scope grid overlay — the "precision" motif, tasteful
+       rather than literal — sits under the crystal glass cards below */
+    content: ""; position: absolute; inset: 0; opacity: 0.05; pointer-events: none;
+    background-image:
+      linear-gradient(var(--accent) 1px, transparent 1px),
+      linear-gradient(90deg, var(--accent) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  @keyframes bgShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: transparent; color: var(--text);
+    max-width: 440px; margin: 0 auto; padding: 24px 20px 60px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 19px; margin: 8px 0 20px; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; }
+  select, input, textarea, button {
+    width: 100%; padding: 12px; font-size: 15px; box-sizing: border-box;
+    border-radius: 10px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text); font-family: inherit;
+  }
+  select { appearance: none; }
+  button.primary {
+    margin-top: 18px; background: var(--accent); border: none; color: #fff;
+    font-weight: 600; cursor: pointer; padding: 14px;
+  }
+  button.primary:disabled { background: #33384a; color: var(--muted); }
+  button.link {
+    background: none; border: none; color: var(--accent); font-size: 13px;
+    padding: 10px 0; cursor: pointer; text-decoration: underline;
+  }
+  .card {
+    background: rgba(23, 26, 33, 0.6); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 18px; margin-bottom: 16px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+  }
+  .plan-option {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px; border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 8px; cursor: pointer;
+  }
+  .plan-option.selected { border-color: var(--accent); background: rgba(79,140,255,0.08); }
+  .plan-option input[type="radio"] { width: auto; margin-right: 10px; }
+  #result {
+    margin-top: 22px; padding: 18px; border-radius: 12px; display: none;
+    border: 1px solid var(--border); position: relative; overflow: hidden;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  #result.BUY { background: rgba(53,196,106,0.12); border-color: var(--green); }
+  #result.SELL { background: rgba(255,90,90,0.12); border-color: var(--red); }
+  #result.WAIT { background: rgba(227,178,60,0.10); border-color: var(--amber); }
+  /* "Target acquired" reticle pulse — only for an actual BUY/SELL call,
+     never for WAIT, since there's nothing the engine has actually found
+     to point at yet. Subtle by design: a corner-bracket flash, not a
+     literal firearm graphic. */
+  #result.BUY::before, #result.SELL::before {
+    content: ""; position: absolute; top: 8px; right: 8px; width: 22px; height: 22px;
+    border-top: 2px solid currentColor; border-right: 2px solid currentColor;
+    opacity: 0; animation: reticleFlash 0.6s ease-out 0.15s forwards;
+  }
+  #result.BUY::before { color: var(--green); }
+  #result.SELL::before { color: var(--red); }
+  @keyframes reticleFlash {
+    0% { opacity: 0; transform: scale(1.4); }
+    60% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0.5; transform: scale(1); }
+  }
+  .signal-label { font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
+  .BUY .signal-label { color: var(--green); }
+  .SELL .signal-label { color: var(--red); }
+  .WAIT .signal-label { color: var(--amber); }
+  .confidence { color: var(--muted); margin-top: 4px; font-size: 14px; }
+  .explanation { margin-top: 12px; font-size: 14px; line-height: 1.4; }
+  .timewindow {
+    margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--muted); display: flex; justify-content: space-between;
+  }
+  .error { color: var(--red); font-size: 13px; margin-top: 10px; }
+  .success { color: var(--green); font-size: 13px; margin-top: 10px; }
+  .update-banner {
+    display: none; position: sticky; top: 0; margin: -24px -20px 20px;
+    background: var(--accent); color: #fff; padding: 10px 20px; font-size: 13px;
+    text-align: center; cursor: pointer;
+  }
+  .install-banner {
+    display: none; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--card, #1a1d24); border: 1px solid var(--accent); border-radius: 10px;
+    padding: 12px 16px; margin: 0 0 20px; font-size: 13px;
+  }
+  .install-banner button {
+    flex-shrink: 0; padding: 8px 16px; font-size: 13px;
+  }
+  .install-banner .dismiss {
+    background: transparent; border: none; color: var(--muted); cursor: pointer;
+    font-size: 18px; padding: 0 4px; line-height: 1;
+  }
+  .hidden { display: none !important; }
+  .login-pulse {
+    animation: loginPulse 2.5s ease-in-out infinite;
+  }
+  @keyframes loginPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(79,140,255,0); }
+  }
+</style>
+</head>
+<body>
+
+  <div id="bgLayer" class="theme-nebula"></div>
+
+  <button id="themeToggleBtn" aria-label="Change background" style="position:fixed;top:14px;right:14px;width:auto;padding:8px 10px;z-index:5;background:rgba(23,26,33,0.7);backdrop-filter:blur(10px);border-radius:10px">🎨</button>
+  <div id="themePanel" class="card hidden" style="position:fixed;top:56px;right:14px;left:14px;max-width:400px;margin:0 auto;z-index:5">
+    <h2 style="margin-bottom:10px">Background</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="theme-swatch" data-theme="nebula" style="width:auto;flex:1;min-width:70px;background:linear-gradient(-45deg,#1a1440,#142238)">Nebula</button>
+      <button class="theme-swatch" data-theme="market" style="width:auto;flex:1;min-width:70px;background:linear-gradient(-45deg,#103a2b,#0f2a3a)">Market</button>
+      <button class="theme-swatch" data-theme="ember" style="width:auto;flex:1;min-width:70px;background:linear-gradient(-45deg,#3a1414,#331a0a)">Ember</button>
+      <button class="theme-swatch" data-theme="mono" style="width:auto;flex:1;min-width:70px;background:#0f1115">Plain</button>
+    </div>
+    <label for="customBgUpload">Or upload your own image</label>
+    <input type="file" id="customBgUpload" accept="image/*">
+    <div class="sub" style="margin-top:6px">Saved on this device only — never uploaded to any server.</div>
+  </div>
+
+  <div id="updateBanner" class="update-banner">A new version is available — tap to update</div>
+  <div id="siteNoticeBanner" class="hidden" style="background:var(--amber);color:#1a1a1a;padding:10px 20px;font-size:13px;text-align:center;margin:-24px -20px 20px;font-weight:600"></div>
+
+  <div id="installBanner" class="install-banner">
+    <span id="installBannerText">Install this app for quicker access — works offline-ready and opens like a normal app, on phone or desktop.</span>
+    <button id="installBannerBtn">Install</button>
+    <button class="dismiss" id="installBannerDismiss" aria-label="Dismiss">&times;</button>
+  </div>
+
+  <h1>Quotex Signal Generator</h1>
+
+  <!-- ===== SCREEN 1: BUY ACCESS (shown to anyone without a saved key) ===== -->
+  <div id="buyScreen">
+    <div class="card">
+      <h2 style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        Get access
+        <button class="link login-pulse" id="showLicenseFormBtn" style="font-size:13px;padding:6px 12px;border:1px solid var(--accent);border-radius:20px;text-decoration:none">Already have a key? Log in</button>
+      </h2>
+      <div class="sub">Choose a plan, fill in your details, then check the payment instructions below to complete payment.</div>
+
+      <!-- Update these two prices here (and in ADMIN_GUIDE.md notes) if you change pricing later -->
+      <div class="plan-option selected" data-days="30">
+        <div><b>30 days</b> — $29/month</div>
+        <input type="radio" name="plan" value="30" checked>
+      </div>
+      <div class="plan-option" data-days="365">
+        <div><b>365 days</b> — $164/year</div>
+        <input type="radio" name="plan" value="365">
+      </div>
+
+      <label>Your name</label>
+      <input id="payName" type="text" placeholder="Your name">
+
+      <label>Contact (WhatsApp number or email — we'll send your key here)</label>
+      <input id="payContact" type="text" placeholder="+92XXXXXXXXXX or you@email.com">
+
+      <label>Transaction ID / note</label>
+      <textarea id="payNote" rows="2" placeholder="JazzCash transaction ID, or any note to help us verify"></textarea>
+
+      <label>Upload payment voucher/screenshot (optional, but speeds up verification)</label>
+      <input id="payVoucher" type="file" accept="image/*">
+
+      <button class="primary" id="submitPaymentBtn">Submit payment details</button>
+      <div id="paymentError" class="error"></div>
+      <div id="paymentSuccess" class="success"></div>
+
+      <label style="margin-top:20px">Payment instructions</label>
+      <div class="sub" id="paymentInstructions">
+        Send payment to one of the accounts below, then submit your
+        transaction ID / screenshot above so we can verify it and send
+        your key.
+        <div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
+          <b>JazzCash</b><br>
+          03455551040 &mdash; Afzaal Ahmed
+        </div>
+        <div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
+          <b>Easypaisa</b><br>
+          03455551040 &mdash; Afzaal Ahmed
+        </div>
+        <!-- BANK OF KHYBER: paste your account title, account number/IBAN,
+             and branch below, then uncomment this block.
+        <div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
+          <b>Bank of Khyber</b><br>
+          Account title: <br>
+          Account number / IBAN: <br>
+          Branch:
+        </div>
+        -->
+      </div>
+    </div>
+
+    <div class="card" style="font-size:12px;color:var(--muted);line-height:1.5">
+      Signals are generated from technical analysis of real market data and are provided for informational purposes only — they are not financial advice, and past performance does not guarantee future results. Trading involves risk of loss. You are responsible for your own trading decisions.
+      <br><br>
+      Questions or issues? Contact: SUPPORT_CONTACT_HERE
+      <br><br>
+      <!-- Join our Telegram: this is a plain link to an announcement/
+           info channel — NOT a signal-generating bot. Replace
+           TELEGRAM_CHANNEL_LINK_HERE with your real channel link
+           (e.g. https://t.me/yourchannel) once you've created one. -->
+      Updates & announcements: <a href="TELEGRAM_CHANNEL_LINK_HERE" style="color:var(--accent)">Join our Telegram</a>
+    </div>
+  </div>
+
+  <!-- ===== SCREEN 2: ENTER LICENSE KEY (for returning customers, or right after approval) ===== -->
+  <div id="licenseScreen" class="hidden">
+    <div class="card">
+      <label>License key</label>
+      <input id="licenseKey" type="text" placeholder="QX-XXXX-XXXX-XXXX-XXXX">
+      <button class="primary" id="saveLicenseBtn">Save key</button>
+      <div id="licenseError" class="error"></div>
+    </div>
+    <button class="link" id="showBuyScreenBtn">Need to buy a key instead?</button>
+  </div>
+
+  <!-- ===== SCREEN 3: GENERATE SIGNAL (shown once a key is saved) ===== -->
+  <div id="generateScreen" class="hidden">
+    <div class="sub">Licensed — <button class="link" style="display:inline;padding:0" id="changeKeyBtn">change key</button></div>
+
+    <div style="font-size:13px;opacity:0.8;margin-bottom:8px">
+      Current time: <b id="tradeClock">--:--:--</b>
+    </div>
+
+    <label>Asset</label>
+    <select id="asset"><option>Loading...</option></select>
+
+    <label>Signal validity window</label>
+    <select id="duration">
+      <option value="15">15 seconds</option>
+      <option value="30">30 seconds</option>
+      <option value="60" selected>1 minute</option>
+      <option value="120">2 minutes</option>
+      <option value="180">3 minutes</option>
+      <option value="300">5 minutes</option>
+      <option value="600">10 minutes</option>
+      <option value="900">15 minutes</option>
+      <option value="1800">30 minutes</option>
+      <option value="3600">1 hour</option>
+    </select>
+
+    <button class="primary" id="generateBtn">Generate Signal</button>
+
+    <div id="result"></div>
+    <div id="genError" class="error"></div>
+  </div>
+
+  <!-- ===== AI SUPPORT CHAT WIDGET ===== -->
+  <button id="chatToggle" style="position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:24px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:100">💬</button>
+
+  <div id="chatPanel" class="hidden" style="position:fixed;bottom:86px;right:20px;width:320px;max-width:calc(100vw - 40px);height:420px;background:var(--panel);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.4)">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px">Support Chat</div>
+    <div id="chatMessages" style="flex:1;overflow-y:auto;padding:12px 16px;font-size:13px;line-height:1.4"></div>
+    <div style="padding:10px;border-top:1px solid var(--border);display:flex;gap:6px">
+      <input id="chatInput" type="text" placeholder="Ask a question..." style="flex:1;padding:8px;font-size:13px;margin:0">
+      <button id="chatSendBtn" style="width:auto;padding:8px 14px;margin:0">Send</button>
+    </div>
+  </div>
+
+<script>
+  // Render gives you ONE fixed URL for the life of the service — no more
+  // tunnel URLs that change on every restart, no more patch-and-redeploy
+  // script. Set this once, right after your first Render deploy, and
+  // you should never need to touch it again.
+  const BACKEND_URL = "https://quotex-signal-backend.onrender.com";
+
+  // ---------- persistent device token (per-browser device lock) ----------
+  // NOTE ON "HARDWARE LOCK" HERE: a web browser deliberately can't read
+  // real hardware IDs (MAC, motherboard serial, etc.) for privacy reasons
+  // — only the native desktop client (clients/desktop/) can do a true
+  // hardware-level lock. This token is a persistent per-browser-install
+  // identifier instead: stable across visits, but tied to this browser
+  // profile, not the physical machine. Combined with the backend's
+  // max_concurrent_sessions, it still limits how many devices/browsers
+  // one key can be active on — just at browser granularity, not silicon.
+  function getSessionToken() {
+    let token = localStorage.getItem("qx_session_token");
+    if (!token) {
+      token = crypto.randomUUID();
+      localStorage.setItem("qx_session_token", token);
+    }
+    return token;
+  }
+
+  // ---------- license key persistence (this was the bug — now fixed) ----------
+  function getSavedLicenseKey() {
+    return localStorage.getItem("qx_license_key") || "";
+  }
+  function saveLicenseKey(key) {
+    localStorage.setItem("qx_license_key", key);
+  }
+  function clearLicenseKey() {
+    localStorage.removeItem("qx_license_key");
+  }
+
+  // ---------- screen switching ----------
+  function showScreen(id) {
+    ["buyScreen", "licenseScreen", "generateScreen"].forEach(s => {
+      document.getElementById(s).classList.toggle("hidden", s !== id);
+    });
+  }
+
+  // ---------- PWA install prompt ----------
+  // Chrome/Edge (desktop AND Android) fire `beforeinstallprompt` when the
+  // manifest+service-worker+HTTPS criteria are met (already true for this
+  // app). We capture it instead of letting the browser show only its own
+  // subtle address-bar icon, so we can show an actual banner asking people
+  // to install — same code path covers desktop and Android, no separate
+  // logic needed for "also on desktop".
+  //
+  // iOS Safari never fires this event at all (Apple doesn't support it) —
+  // the only way to install there is the user manually tapping Share ->
+  // "Add to Home Screen", so we detect iOS Safari specifically and show
+  // instructions instead of a button that would do nothing.
+  let deferredInstallPrompt = null;
+
+  function isStandaloneAlready() {
+    return window.matchMedia("(display-mode: standalone)").matches
+      || window.navigator.standalone === true; // iOS-specific flag
+  }
+
+  function isIOSSafari() {
+    const ua = window.navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+    return isIOS && isSafari;
+  }
+
+  function installBannerDismissedRecently() {
+    const dismissedAt = localStorage.getItem("qx_install_dismissed_at");
+    if (!dismissedAt) return false;
+    // Re-show after 7 days rather than never again — a one-time dismiss
+    // shouldn't permanently hide something this useful.
+    return (Date.now() - parseInt(dismissedAt, 10)) < 7 * 24 * 60 * 60 * 1000;
+  }
+
+  function showInstallBanner(mode) {
+    if (isStandaloneAlready() || installBannerDismissedRecently()) return;
+    const banner = document.getElementById("installBanner");
+    const btn = document.getElementById("installBannerBtn");
+    const text = document.getElementById("installBannerText");
+    if (mode === "ios") {
+      text.textContent = "Install this app: tap the Share icon, then \"Add to Home Screen\".";
+      btn.style.display = "none";
+    } else {
+      text.textContent = "Install this app for quicker access — works like a normal app, on phone or desktop.";
+      btn.style.display = "";
+    }
+    banner.style.display = "flex";
+  }
+
+  function initInstallPrompt() {
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault(); // stop the browser's own mini-infobar; we show our own banner instead
+      deferredInstallPrompt = e;
+      showInstallBanner("standard");
+    });
+
+    document.getElementById("installBannerBtn").addEventListener("click", async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice; // resolves once the user accepts/dismisses the native dialog
+      deferredInstallPrompt = null;
+      document.getElementById("installBanner").style.display = "none";
+    });
+
+    document.getElementById("installBannerDismiss").addEventListener("click", () => {
+      localStorage.setItem("qx_install_dismissed_at", String(Date.now()));
+      document.getElementById("installBanner").style.display = "none";
+    });
+
+    window.addEventListener("appinstalled", () => {
+      document.getElementById("installBanner").style.display = "none";
+    });
+
+    if (isIOSSafari() && !isStandaloneAlready()) {
+      showInstallBanner("ios");
+    }
+  }
+
+  // ---------- Background theme picker ----------
+  const bgLayer = document.getElementById("bgLayer");
+  const THEME_KEY = "qx_bg_theme";       // "nebula" | "market" | "ember" | "mono" | "custom"
+  const CUSTOM_BG_KEY = "qx_bg_custom";  // data URL, only used when THEME_KEY === "custom"
+
+  function applyTheme(theme) {
+    bgLayer.className = "theme-" + theme;
+    if (theme === "custom") {
+      const dataUrl = localStorage.getItem(CUSTOM_BG_KEY);
+      if (dataUrl) bgLayer.style.backgroundImage = `url("${dataUrl}")`;
+    } else {
+      bgLayer.style.backgroundImage = "";
+    }
+  }
+
+  function initThemePicker() {
+    const saved = localStorage.getItem(THEME_KEY) || "nebula";
+    applyTheme(saved);
+
+    document.getElementById("themeToggleBtn").addEventListener("click", () => {
+      document.getElementById("themePanel").classList.toggle("hidden");
+    });
+
+    document.querySelectorAll(".theme-swatch").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const theme = btn.dataset.theme;
+        localStorage.setItem(THEME_KEY, theme);
+        applyTheme(theme);
+      });
+    });
+
+    document.getElementById("customBgUpload").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Please choose an image under 5MB — large images are stored on this device and can slow the page down.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        // Stored ONLY in this browser's localStorage — never sent to any
+        // server (there's no upload endpoint for this at all).
+        try {
+          localStorage.setItem(CUSTOM_BG_KEY, reader.result);
+          localStorage.setItem(THEME_KEY, "custom");
+          applyTheme("custom");
+        } catch (err) {
+          alert("Couldn't save that image — it may be too large for this browser's local storage. Try a smaller image.");
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function init() {
+    initThemePicker();
+    initInstallPrompt();
+    const savedKey = getSavedLicenseKey();
+    if (savedKey) {
+      showScreen("generateScreen");
+      loadAssets();
+    } else {
+      showScreen("buyScreen");
+    }
+    startTradeClock();
+  }
+
+  function startTradeClock() {
+    const clockEl = document.getElementById("tradeClock");
+    if (!clockEl) return;
+    const tick = () => {
+      clockEl.textContent = new Date().toLocaleTimeString();
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  document.getElementById("showLicenseFormBtn").addEventListener("click", () => showScreen("licenseScreen"));
+  document.getElementById("showBuyScreenBtn").addEventListener("click", () => showScreen("buyScreen"));
+  document.getElementById("changeKeyBtn").addEventListener("click", () => {
+    clearLicenseKey();
+    showScreen("licenseScreen");
+  });
+
+  document.querySelectorAll(".plan-option").forEach(el => {
+    el.addEventListener("click", () => {
+      document.querySelectorAll(".plan-option").forEach(o => o.classList.remove("selected"));
+      el.classList.add("selected");
+      el.querySelector("input[type=radio]").checked = true;
+    });
+  });
+
+  document.getElementById("submitPaymentBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("paymentError");
+    const successEl = document.getElementById("paymentSuccess");
+    errorEl.textContent = ""; successEl.textContent = "";
+
+    const name = document.getElementById("payName").value.trim();
+    const contact = document.getElementById("payContact").value.trim();
+    const note = document.getElementById("payNote").value.trim();
+    const planDays = parseInt(document.querySelector('input[name="plan"]:checked').value, 10);
+    const voucherFile = document.getElementById("payVoucher").files[0];
+
+    if (!name || !contact) {
+      errorEl.textContent = "Please fill in your name and contact info.";
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("contact", contact);
+    formData.append("plan_days", planDays);
+    formData.append("transaction_note", note);
+    if (voucherFile) formData.append("voucher_image", voucherFile);
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/payment/request`, {
+        method: "POST",
+        body: formData,  // no Content-Type header — browser sets the correct multipart boundary itself
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Submission failed.");
+      successEl.textContent = data.message;
+      document.getElementById("payName").value = "";
+      document.getElementById("payContact").value = "";
+      document.getElementById("payNote").value = "";
+      document.getElementById("payVoucher").value = "";
+    } catch (e) {
+      errorEl.textContent = e.message || "Could not submit. Try again.";
+    }
+  });
+
+  document.getElementById("saveLicenseBtn").addEventListener("click", async () => {
+    const key = document.getElementById("licenseKey").value.trim();
+    const btn = document.getElementById("saveLicenseBtn");
+    const errorEl = document.getElementById("licenseError");
+    if (errorEl) errorEl.textContent = "";
+    if (!key) return;
+
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = "Checking...";
+    try {
+      const res = await fetch(`${BACKEND_URL}/license/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ license_key: key }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (errorEl) errorEl.textContent = data.detail || "That key isn't valid.";
+        else alert(data.detail || "That key isn't valid.");
+        return;
+      }
+      // Only persist and show the dashboard once the backend has actually
+      // confirmed the key exists and is unrevoked/unexpired.
+      saveLicenseKey(key);
+      showScreen("generateScreen");
+      loadAssets();
+    } catch (e) {
+      // Backend unreachable — do NOT let the user in. Previously this
+      // step never called the backend at all, so a random key (or a
+      // dead backend) would still show the dashboard; actual signal
+      // generation was the only real check. Now the login step itself
+      // requires a reachable, valid backend.
+      if (errorEl) errorEl.textContent = "Could not reach the backend to verify your key. Is it running?";
+      else alert("Could not reach the backend to verify your key. Is it running?");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  });
+
+  async function loadAssets() {
+    const select = document.getElementById("asset");
+    try {
+      const res = await fetch(`${BACKEND_URL}/assets`);
+      if (!res.ok) throw new Error(`Backend returned ${res.status}`);
+      const data = await res.json();
+      if (!data.tracked_assets || !data.tracked_assets.length) {
+        throw new Error("Backend returned an empty asset list");
+      }
+      select.innerHTML = data.tracked_assets
+        .map(a => `<option value="${a}">${a.slice(0,3)}/${a.slice(3)}</option>`)
+        .join("");
+    } catch (e) {
+      // Fetch/CORS failure — fall back to the 4 configured pairs (config.yaml's
+      // tracked_assets) so the dropdown still shows all of them instead of
+      // collapsing to one, and flag that this is a fallback, not live data.
+      console.error("[assets] falling back to static list:", e);
+      const FALLBACK_ASSETS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD"];
+      select.innerHTML = FALLBACK_ASSETS
+        .map(a => `<option value="${a}">${a.slice(0,3)}/${a.slice(3)}</option>`)
+        .join("");
+      const errorEl = document.getElementById("genError");
+      if (errorEl) {
+        errorEl.textContent = "Couldn't reach the backend to confirm live assets — showing the configured list. Check BACKEND_URL / that the server is running.";
+      }
+    }
+  }
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  document.getElementById("generateBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("generateBtn");
+    const resultEl = document.getElementById("result");
+    const errorEl = document.getElementById("genError");
+    errorEl.textContent = "";
+    resultEl.style.display = "none";
+
+    const licenseKey = getSavedLicenseKey();
+    const asset = document.getElementById("asset").value;
+    const durationSeconds = parseInt(document.getElementById("duration").value, 10);
+
+    btn.disabled = true;
+    btn.textContent = "Generating...";
+    try {
+      const res = await fetch(`${BACKEND_URL}/generate-signal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          license_key: licenseKey,
+          session_token: getSessionToken(),
+          client_type: "web",
+          asset: asset,
+          duration_seconds: durationSeconds,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errorEl.textContent = data.detail || "Request failed.";
+        if (res.status === 401 || res.status === 403) {
+          // key was rejected (expired/revoked/invalid) — send them back
+          errorEl.textContent += " Your key may have expired — please re-enter it.";
+        }
+      } else {
+        resultEl.className = data.signal;
+        resultEl.style.display = "block";
+        resultEl.innerHTML = `
+          <div class="signal-label">${data.signal}</div>
+          <div class="confidence">Confidence: ${data.confidence}%</div>
+          <div class="explanation">${data.explanation}</div>
+          <div class="timewindow">
+            <span>From ${fmtTime(data.generated_at)}</span>
+            <span>Until ${fmtTime(data.valid_until)}</span>
+          </div>
+          ${!data.feed_healthy ? '<div class="error">Feed may be stale — treat with caution.</div>' : ""}
+        `;
+        // Grounds the AI chat in the real, current indicator output instead
+        // of it having to guess or generalize when asked "why" / "what about
+        // EURUSD right now" — see sendChatMessage() below.
+        lastSignalContext = {
+          asset, signal: data.signal, confidence: data.confidence,
+          explanation: data.explanation, feed_healthy: data.feed_healthy,
+        };
+      }
+    } catch (e) {
+      errorEl.textContent = "Could not reach backend. Is it running?";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Generate Signal";
+    }
+  });
+
+  init();
+
+  // ---------- site notice banner (admin-controlled, e.g. maintenance) ----------
+  async function loadSiteNotice() {
+    try {
+      const res = await fetch(`${BACKEND_URL}/notice`);
+      const data = await res.json();
+      const banner = document.getElementById("siteNoticeBanner");
+      if (data.message && data.message.trim()) {
+        banner.textContent = data.message;
+        banner.classList.remove("hidden");
+      } else {
+        banner.classList.add("hidden");
+      }
+    } catch (e) {
+      // silently fail — a missing notice shouldn't block the app from working
+    }
+  }
+  loadSiteNotice();
+
+  // --- PWA install + auto-update wiring ---
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./service-worker.js").then((reg) => {
+      if (reg.waiting) showUpdateBanner(reg);
+      reg.addEventListener("updatefound", () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener("statechange", () => {
+          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+            showUpdateBanner(reg);
+          }
+        });
+      });
+    });
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  }
+
+  function showUpdateBanner(reg) {
+    const banner = document.getElementById("updateBanner");
+    banner.style.display = "block";
+    banner.addEventListener("click", () => {
+      if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+    });
+  }
+
+  // ---------- AI support chat widget ----------
+  const chatPanel = document.getElementById("chatPanel");
+  const chatMessages = document.getElementById("chatMessages");
+  const chatInput = document.getElementById("chatInput");
+  let lastSignalContext = null; // set by the generateBtn handler above
+  let chatHistory = []; // [{role: "user"|"model", text: "..."}], kept client-side only
+
+  document.getElementById("chatToggle").addEventListener("click", () => {
+    chatPanel.classList.toggle("hidden");
+  });
+
+  function addChatMessage(text, fromUser) {
+    const div = document.createElement("div");
+    div.style.marginBottom = "10px";
+    div.style.textAlign = fromUser ? "right" : "left";
+    div.innerHTML = `<span style="display:inline-block;padding:8px 10px;border-radius:8px;background:${fromUser ? 'var(--accent)' : '#262b36'};color:${fromUser ? '#fff' : 'var(--text)'};max-width:85%">${text}</span>`;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  async function sendChatMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+    addChatMessage(text, true);
+    chatInput.value = "";
+    chatHistory.push({ role: "user", text });
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/support/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          history: chatHistory.slice(0, -1).slice(-10), // last 10 turns, excluding the message just sent
+          signal_context: lastSignalContext,
+        }),
+      });
+      const data = await res.json();
+      const reply = res.ok ? data.reply : (data.detail || "Something went wrong.");
+      addChatMessage(reply, false);
+      if (res.ok) chatHistory.push({ role: "model", text: reply });
+    } catch (e) {
+      addChatMessage("Could not reach support chat right now.", false);
+    }
+  }
+
+  document.getElementById("chatSendBtn").addEventListener("click", sendChatMessage);
+  chatInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendChatMessage();
+  });
+</script>
+
+</body>
+</html>
