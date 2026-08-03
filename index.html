@@ -40,11 +40,59 @@
     100% { background-position: 0% 50%; }
   }
 
+  .bubbles { position: absolute; inset: 0; overflow: hidden; }
+  .bubble {
+    position: absolute; bottom: -120px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0.02));
+    filter: blur(1px);
+    animation: bubbleFloat linear infinite;
+  }
+  .bubble.b1 { left: 8%;  width: 60px;  height: 60px;  animation-duration: 22s; animation-delay: 0s; }
+  .bubble.b2 { left: 22%; width: 30px;  height: 30px;  animation-duration: 16s; animation-delay: 3s; }
+  .bubble.b3 { left: 45%; width: 90px;  height: 90px;  animation-duration: 28s; animation-delay: 1s; }
+  .bubble.b4 { left: 65%; width: 40px;  height: 40px;  animation-duration: 19s; animation-delay: 6s; }
+  .bubble.b5 { left: 80%; width: 55px;  height: 55px;  animation-duration: 25s; animation-delay: 2s; }
+  .bubble.b6 { left: 92%; width: 25px;  height: 25px;  animation-duration: 14s; animation-delay: 5s; }
+  @keyframes bubbleFloat {
+    0%   { transform: translateY(0) translateX(0);      opacity: 0; }
+    10%  { opacity: 0.6; }
+    50%  { transform: translateY(-55vh) translateX(20px); }
+    90%  { opacity: 0.4; }
+    100% { transform: translateY(-110vh) translateX(-15px); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bubble { animation: none; display: none; }
+    #bgLayer.theme-nebula, #bgLayer.theme-market, #bgLayer.theme-ember { animation: none; }
+  }
+
   body {
     font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
     background: transparent; color: var(--text);
-    max-width: 440px; margin: 0 auto; padding: 24px 20px 60px;
+    max-width: 440px; margin: 0 auto; padding: 56px 20px 60px;
     min-height: 100vh;
+  }
+  .ticker-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 7;
+    height: 30px; overflow: hidden;
+    background: rgba(10,11,15,0.85); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center;
+  }
+  .ticker-track {
+    white-space: nowrap; padding-left: 100%;
+    animation: tickerScroll 28s linear infinite;
+    font-size: 12px; font-variant-numeric: tabular-nums;
+  }
+  .ticker-track .t-item { display: inline-block; margin-right: 32px; }
+  .ticker-track .t-up { color: var(--green); }
+  .ticker-track .t-down { color: var(--red); }
+  .ticker-track .t-stale { color: var(--muted); }
+  @keyframes tickerScroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-track { animation: none; padding-left: 12px; }
   }
   h1 { font-size: 19px; margin: 8px 0 20px; }
   h2 { font-size: 16px; margin: 0 0 4px; }
@@ -106,7 +154,9 @@
   .BUY .signal-label { color: var(--green); }
   .SELL .signal-label { color: var(--red); }
   .WAIT .signal-label { color: var(--amber); }
-  .confidence { color: var(--muted); margin-top: 4px; font-size: 14px; }
+  .confidence { margin-top: 4px; font-size: 14px; }
+  .confidence-tier { font-weight: 600; }
+  .confidence-pct { color: var(--muted); font-size: 12.5px; margin-left: 4px; }
   .explanation { margin-top: 12px; font-size: 14px; line-height: 1.4; }
   .timewindow {
     margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
@@ -120,16 +170,28 @@
     text-align: center; cursor: pointer;
   }
   .install-banner {
-    display: none; align-items: center; justify-content: space-between; gap: 12px;
-    background: var(--card, #1a1d24); border: 1px solid var(--accent); border-radius: 10px;
-    padding: 12px 16px; margin: 0 0 20px; font-size: 13px;
+    display: none; align-items: center; gap: 10px;
+    position: fixed; left: 14px; bottom: 14px; z-index: 6;
+    max-width: 260px;
+    background: linear-gradient(135deg, var(--accent), #7c5cff);
+    color: #fff; border-radius: 14px;
+    padding: 10px 12px; font-size: 12.5px; line-height: 1.3;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    animation: installPop 0.4s ease-out;
   }
+  @keyframes installPop {
+    0% { transform: translateY(12px) scale(0.9); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  .install-banner .install-icon { font-size: 20px; flex-shrink: 0; }
   .install-banner button {
-    flex-shrink: 0; padding: 8px 16px; font-size: 13px;
+    flex-shrink: 0; padding: 6px 12px; font-size: 12px;
+    background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
+    color: #fff; border-radius: 8px; width: auto;
   }
   .install-banner .dismiss {
-    background: transparent; border: none; color: var(--muted); cursor: pointer;
-    font-size: 18px; padding: 0 4px; line-height: 1;
+    background: transparent; border: none; color: rgba(255,255,255,0.7); cursor: pointer;
+    font-size: 16px; padding: 0 2px; line-height: 1; position: absolute; top: 4px; right: 6px;
   }
   .hidden { display: none !important; }
   .login-pulse {
@@ -143,7 +205,20 @@
 </head>
 <body>
 
-  <div id="bgLayer" class="theme-nebula"></div>
+  <div id="tickerBar" class="ticker-bar">
+    <div class="ticker-track" id="tickerTrack">Loading market data…</div>
+  </div>
+
+  <div id="bgLayer" class="theme-nebula">
+    <div class="bubbles" aria-hidden="true">
+      <span class="bubble b1"></span>
+      <span class="bubble b2"></span>
+      <span class="bubble b3"></span>
+      <span class="bubble b4"></span>
+      <span class="bubble b5"></span>
+      <span class="bubble b6"></span>
+    </div>
+  </div>
 
   <button id="themeToggleBtn" aria-label="Change background" style="position:fixed;top:14px;right:14px;width:auto;padding:8px 10px;z-index:5;background:rgba(23,26,33,0.7);backdrop-filter:blur(10px);border-radius:10px">🎨</button>
   <div id="themePanel" class="card hidden" style="position:fixed;top:56px;right:14px;left:14px;max-width:400px;margin:0 auto;z-index:5">
@@ -163,7 +238,8 @@
   <div id="siteNoticeBanner" class="hidden" style="background:var(--amber);color:#1a1a1a;padding:10px 20px;font-size:13px;text-align:center;margin:-24px -20px 20px;font-weight:600"></div>
 
   <div id="installBanner" class="install-banner">
-    <span id="installBannerText">Install this app for quicker access — works offline-ready and opens like a normal app, on phone or desktop.</span>
+    <span class="install-icon">📲</span>
+    <span id="installBannerText">Install this app for quicker access.</span>
     <button id="installBannerBtn">Install</button>
     <button class="dismiss" id="installBannerDismiss" aria-label="Dismiss">&times;</button>
   </div>
@@ -250,6 +326,10 @@
       <input id="licenseKey" type="text" placeholder="QX-XXXX-XXXX-XXXX-XXXX">
       <button class="primary" id="saveLicenseBtn">Save key</button>
       <div id="licenseError" class="error"></div>
+      <div class="sub" style="margin-top:12px">
+        ⏳ First login of the day can take 40-50 seconds to respond — the
+        server is waking up from being idle. It'll be fast after that.
+      </div>
     </div>
     <button class="link" id="showBuyScreenBtn">Need to buy a key instead?</button>
   </div>
@@ -283,6 +363,11 @@
 
     <div id="result"></div>
     <div id="genError" class="error"></div>
+
+    <label style="margin-top:20px">Signal history</label>
+    <div id="historyPanel" class="card" style="max-height:220px;overflow-y:auto">
+      <div class="sub">No signals generated yet.</div>
+    </div>
   </div>
 
   <!-- ===== AI SUPPORT CHAT WIDGET ===== -->
@@ -380,10 +465,10 @@
     const btn = document.getElementById("installBannerBtn");
     const text = document.getElementById("installBannerText");
     if (mode === "ios") {
-      text.textContent = "Install this app: tap the Share icon, then \"Add to Home Screen\".";
+      text.textContent = "Tap Share, then \"Add to Home Screen\" to install.";
       btn.style.display = "none";
     } else {
-      text.textContent = "Install this app for quicker access — works like a normal app, on phone or desktop.";
+      text.textContent = "Install this app for quicker access.";
       btn.style.display = "";
     }
     banner.style.display = "flex";
@@ -475,10 +560,12 @@
   function init() {
     initThemePicker();
     initInstallPrompt();
+    initTicker();
     const savedKey = getSavedLicenseKey();
     if (savedKey) {
       showScreen("generateScreen");
       loadAssets();
+      refreshSignalHistory();
     } else {
       showScreen("buyScreen");
     }
@@ -624,6 +711,130 @@
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
+  // ---------- Live asset ticker ----------
+  const ARROW = { up: "▲", down: "▼", flat: "◆" };
+
+  async function refreshTicker() {
+    try {
+      const res = await fetch(`${BACKEND_URL}/assets/ticker`);
+      const data = await res.json();
+      const track = document.getElementById("tickerTrack");
+      if (!data.ticker || !data.ticker.length) {
+        track.textContent = "Market data unavailable.";
+        return;
+      }
+      track.innerHTML = data.ticker.map(t => {
+        const cls = !t.feed_healthy ? "t-stale" : (t.change === "up" ? "t-up" : t.change === "down" ? "t-down" : "");
+        const priceText = t.price != null ? t.price.toFixed(5) : "—";
+        const label = t.asset.replace(/(.{3})(.{3})/, "$1/$2");
+        return `<span class="t-item ${cls}">${label} ${priceText} ${t.feed_healthy ? ARROW[t.change] : "…"}</span>`;
+      }).join("");
+    } catch (e) {
+      // silent — the ticker is decorative, never worth an error banner
+    }
+  }
+
+  function initTicker() {
+    refreshTicker();
+    setInterval(refreshTicker, 20000);
+  }
+
+  // ---------- Audio cue on signal generation ----------
+  // Synthesized with the Web Audio API — no external sound file needed,
+  // and it's triggered directly inside a click handler (the Generate
+  // button), which satisfies browsers' autoplay-requires-user-gesture
+  // rule without needing any extra unlock step.
+  function playSignalChime() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {
+      // Web Audio unsupported/blocked — silently skip, never break the
+      // actual signal generation over a decorative sound effect.
+    }
+  }
+
+  // ---------- Signal history panel ----------
+  function outcomeBadge(outcome) {
+    if (outcome === "win") return '<span style="color:var(--green);font-weight:600">WIN</span>';
+    if (outcome === "loss") return '<span style="color:var(--red);font-weight:600">LOSS</span>';
+    if (outcome === "pending") return '<span style="color:var(--muted)">pending</span>';
+    return '<span style="color:var(--muted)">—</span>';
+  }
+
+  async function refreshSignalHistory() {
+    const key = getSavedLicenseKey();
+    const panel = document.getElementById("historyPanel");
+    if (!key || !panel) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/signals/history`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ license_key: key }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.history || !data.history.length) {
+        panel.innerHTML = '<div class="sub">No signals generated yet.</div>';
+        return;
+      }
+      panel.innerHTML = data.history.map(h => {
+        const tier = confidenceTier(h.confidence);
+        const time = new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dirColor = h.signal === "BUY" ? "var(--green)" : h.signal === "SELL" ? "var(--red)" : "var(--amber)";
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px">
+            <span>${time} · ${h.asset} · <span style="color:${dirColor};font-weight:600">${h.signal}</span></span>
+            <span style="color:${tier.color}">${tier.label}</span>
+            <span>${outcomeBadge(h.outcome)}</span>
+          </div>`;
+      }).join("");
+    } catch (e) {
+      // history is supplementary — a failed fetch shouldn't block anything else
+    }
+  }
+
+  // ---------- One-click copy signal to clipboard ----------
+  function copySignalToClipboard(asset, signal, generatedAtIso) {
+    // CALL/PUT rather than BUY/SELL — matches Quotex's own platform
+    // button labels directly, so this can be pasted/referenced without
+    // the trader needing to mentally translate BUY->CALL, SELL->PUT.
+    const direction = signal === "BUY" ? "CALL" : signal === "SELL" ? "PUT" : signal;
+    const label = asset.replace(/(.{3})(.{3})/, "$1/$2");
+    const time = new Date(generatedAtIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const text = `${label} ${direction} @ ${time}`;
+    const confirmEl = document.getElementById("copySignalConfirm");
+    navigator.clipboard.writeText(text).then(() => {
+      if (confirmEl) {
+        confirmEl.textContent = "Copied!";
+        setTimeout(() => { if (confirmEl) confirmEl.textContent = ""; }, 2000);
+      }
+    }).catch(() => {
+      if (confirmEl) confirmEl.textContent = "Couldn't copy — try selecting manually.";
+    });
+  }
+
+  function confidenceTier(pct) {
+    // These bands describe how much indicator agreement produced the
+    // real number — never a substitute for the number, always shown
+    // alongside it. Breakpoints are deliberately generic (not hardcoded
+    // to "exactly N indicators") so they stay sensible if indicators are
+    // added/removed/reweighted later.
+    if (pct >= 80) return { label: "Strong agreement", color: "var(--green)" };
+    if (pct >= 55) return { label: "Moderate agreement", color: "var(--accent)" };
+    if (pct >= 30) return { label: "Weak agreement", color: "var(--amber)" };
+    return { label: "Very weak agreement", color: "var(--red)" };
+  }
+
   document.getElementById("generateBtn").addEventListener("click", async () => {
     const btn = document.getElementById("generateBtn");
     const resultEl = document.getElementById("result");
@@ -659,15 +870,30 @@
       } else {
         resultEl.className = data.signal;
         resultEl.style.display = "block";
+        const tier = confidenceTier(data.confidence);
+        const volColor = { "Very calm": "var(--muted)", "Calm": "var(--muted)",
+          "Normal": "var(--accent)", "Elevated": "var(--amber)", "High volatility": "var(--red)" }[data.volatility_label] || "var(--muted)";
         resultEl.innerHTML = `
           <div class="signal-label">${data.signal}</div>
-          <div class="confidence">Confidence: ${data.confidence}%</div>
+          <div class="confidence">
+            <span class="confidence-tier" style="color:${tier.color}">${tier.label}</span>
+            <span class="confidence-pct">(${data.confidence}% indicator agreement)</span>
+          </div>
+          <div class="volatility-badge" style="margin-top:6px;font-size:12px;color:${volColor}">
+            Volatility: ${data.volatility_label}${data.volatility_pct != null ? ` (band width ${data.volatility_pct}%)` : ""}
+          </div>
           <div class="explanation">${data.explanation}</div>
           <div class="timewindow">
             <span>From ${fmtTime(data.generated_at)}</span>
             <span>Until ${fmtTime(data.valid_until)}</span>
           </div>
           ${!data.feed_healthy ? '<div class="error">Feed may be stale — treat with caution.</div>' : ""}
+          ${data.signal !== "WAIT" ? `
+            <button class="secondary" id="copySignalBtn" style="margin-top:12px;width:auto;padding:8px 14px;font-size:12.5px">
+              📋 Copy Signal
+            </button>
+            <span id="copySignalConfirm" class="sub" style="margin-left:8px"></span>
+          ` : ""}
         `;
         // Grounds the AI chat in the real, current indicator output instead
         // of it having to guess or generalize when asked "why" / "what about
@@ -676,6 +902,14 @@
           asset, signal: data.signal, confidence: data.confidence,
           explanation: data.explanation, feed_healthy: data.feed_healthy,
         };
+        if (data.signal !== "WAIT") {
+          const copyBtn = document.getElementById("copySignalBtn");
+          if (copyBtn) {
+            copyBtn.addEventListener("click", () => copySignalToClipboard(asset, data.signal, data.generated_at));
+          }
+        }
+        playSignalChime();
+        refreshSignalHistory();
       }
     } catch (e) {
       errorEl.textContent = "Could not reach backend. Is it running?";
