@@ -255,14 +255,19 @@
       </h2>
       <div class="sub">Choose a plan, fill in your details, then check the payment instructions below to complete payment.</div>
 
-      <!-- Update these two prices here (and in ADMIN_GUIDE.md notes) if you change pricing later -->
-      <div class="plan-option selected" data-days="30">
-        <div><b>30 days</b> — $29/month</div>
-        <input type="radio" name="plan" value="30" checked>
+      <!-- Plan catalog lives in app/accounts/plans.py — keep these two
+           options (and their prices) in sync with PLANS["premium"] /
+           PLANS["pro"] if you change pricing there. Manual approval and
+           Paddle checkout both read duration from that same file now,
+           so a plan_id chosen here grants exactly what the equivalent
+           Paddle purchase would. -->
+      <div class="plan-option selected" data-plan="premium">
+        <div><b>Premium</b> — $29/month</div>
+        <input type="radio" name="plan" value="premium" checked>
       </div>
-      <div class="plan-option" data-days="365">
-        <div><b>365 days</b> — $164/year</div>
-        <input type="radio" name="plan" value="365">
+      <div class="plan-option" data-plan="pro">
+        <div><b>Pro</b> — $79/month</div>
+        <input type="radio" name="plan" value="pro">
       </div>
 
       <label>Your name</label>
@@ -270,6 +275,9 @@
 
       <label>Contact (WhatsApp number or email — we'll send your key here)</label>
       <input id="payContact" type="text" placeholder="+92XXXXXXXXXX or you@email.com">
+
+      <label>Account email (optional — if you have an account, your plan activates automatically once approved)</label>
+      <input id="payEmail" type="email" placeholder="you@email.com">
 
       <label>Transaction ID / note</label>
       <textarea id="payNote" rows="2" placeholder="JazzCash transaction ID, or any note to help us verify"></textarea>
@@ -382,6 +390,8 @@
     </div>
   </div>
 
+<script src="./state.js"></script>
+<script src="./ws.js"></script>
 <script>
   // Render gives you ONE fixed URL for the life of the service — no more
   // tunnel URLs that change on every restart, no more patch-and-redeploy
@@ -399,23 +409,23 @@
   // max_concurrent_sessions, it still limits how many devices/browsers
   // one key can be active on — just at browser granularity, not silicon.
   function getSessionToken() {
-    let token = localStorage.getItem("qx_session_token");
+    let token = AppState.get("user.sessionToken");
     if (!token) {
       token = crypto.randomUUID();
-      localStorage.setItem("qx_session_token", token);
+      AppState.set("user.sessionToken", token);
     }
     return token;
   }
 
   // ---------- license key persistence (this was the bug — now fixed) ----------
   function getSavedLicenseKey() {
-    return localStorage.getItem("qx_license_key") || "";
+    return AppState.get("user.licenseKey") || "";
   }
   function saveLicenseKey(key) {
-    localStorage.setItem("qx_license_key", key);
+    AppState.set("user.licenseKey", key);
   }
   function clearLicenseKey() {
-    localStorage.removeItem("qx_license_key");
+    AppState.set("user.licenseKey", null);
   }
 
   // ---------- screen switching ----------
@@ -452,7 +462,7 @@
   }
 
   function installBannerDismissedRecently() {
-    const dismissedAt = localStorage.getItem("qx_install_dismissed_at");
+    const dismissedAt = AppState.get("ui.installBannerDismissedAt");
     if (!dismissedAt) return false;
     // Re-show after 7 days rather than never again — a one-time dismiss
     // shouldn't permanently hide something this useful.
@@ -490,7 +500,7 @@
     });
 
     document.getElementById("installBannerDismiss").addEventListener("click", () => {
-      localStorage.setItem("qx_install_dismissed_at", String(Date.now()));
+      AppState.set("ui.installBannerDismissedAt", String(Date.now()));
       document.getElementById("installBanner").style.display = "none";
     });
 
@@ -505,13 +515,11 @@
 
   // ---------- Background theme picker ----------
   const bgLayer = document.getElementById("bgLayer");
-  const THEME_KEY = "qx_bg_theme";       // "nebula" | "market" | "ember" | "mono" | "custom"
-  const CUSTOM_BG_KEY = "qx_bg_custom";  // data URL, only used when THEME_KEY === "custom"
 
   function applyTheme(theme) {
     bgLayer.className = "theme-" + theme;
     if (theme === "custom") {
-      const dataUrl = localStorage.getItem(CUSTOM_BG_KEY);
+      const dataUrl = AppState.get("preferences.customBackground");
       if (dataUrl) bgLayer.style.backgroundImage = `url("${dataUrl}")`;
     } else {
       bgLayer.style.backgroundImage = "";
@@ -519,8 +527,7 @@
   }
 
   function initThemePicker() {
-    const saved = localStorage.getItem(THEME_KEY) || "nebula";
-    applyTheme(saved);
+    applyTheme(AppState.get("preferences.theme"));
 
     document.getElementById("themeToggleBtn").addEventListener("click", () => {
       document.getElementById("themePanel").classList.toggle("hidden");
@@ -529,7 +536,7 @@
     document.querySelectorAll(".theme-swatch").forEach((btn) => {
       btn.addEventListener("click", () => {
         const theme = btn.dataset.theme;
-        localStorage.setItem(THEME_KEY, theme);
+        AppState.set("preferences.theme", theme);
         applyTheme(theme);
       });
     });
@@ -546,8 +553,8 @@
         // Stored ONLY in this browser's localStorage — never sent to any
         // server (there's no upload endpoint for this at all).
         try {
-          localStorage.setItem(CUSTOM_BG_KEY, reader.result);
-          localStorage.setItem(THEME_KEY, "custom");
+          AppState.set("preferences.customBackground", reader.result);
+          AppState.set("preferences.theme", "custom");
           applyTheme("custom");
         } catch (err) {
           alert("Couldn't save that image — it may be too large for this browser's local storage. Try a smaller image.");
@@ -561,6 +568,7 @@
     initThemePicker();
     initInstallPrompt();
     initTicker();
+    initWebSocket();
     const savedKey = getSavedLicenseKey();
     if (savedKey) {
       showScreen("generateScreen");
@@ -571,6 +579,22 @@
     }
     startTradeClock();
   }
+
+  // ---------- Live WebSocket feed ----------
+  // Additive fast path alongside the REST ticker poll above — see ws.js
+  // for the full reconnect/heartbeat/stale-packet handling. Only the
+  // "quotex" room is used today since this UI has no forex-mode toggle
+  // yet (see AppState.currentMode's comment in state.js); wsClient.setRoom()
+  // is exposed on window specifically so that toggle has something to
+  // call without touching this file again once it exists.
+  let wsClient = null;
+  function initWebSocket() {
+    wsClient = createWsClient(BACKEND_URL);
+    wsClient.connect();
+    wsClient.setRoom("quotex");
+    window.wsClient = wsClient;
+  }
+
 
   function startTradeClock() {
     const clockEl = document.getElementById("tradeClock");
@@ -604,8 +628,9 @@
 
     const name = document.getElementById("payName").value.trim();
     const contact = document.getElementById("payContact").value.trim();
+    const email = document.getElementById("payEmail").value.trim();
     const note = document.getElementById("payNote").value.trim();
-    const planDays = parseInt(document.querySelector('input[name="plan"]:checked').value, 10);
+    const planId = document.querySelector('input[name="plan"]:checked').value;
     const voucherFile = document.getElementById("payVoucher").files[0];
 
     if (!name || !contact) {
@@ -616,7 +641,8 @@
     const formData = new FormData();
     formData.append("name", name);
     formData.append("contact", contact);
-    formData.append("plan_days", planDays);
+    formData.append("plan_id", planId);
+    if (email) formData.append("email", email);
     formData.append("transaction_note", note);
     if (voucherFile) formData.append("voucher_image", voucherFile);
 
@@ -630,6 +656,7 @@
       successEl.textContent = data.message;
       document.getElementById("payName").value = "";
       document.getElementById("payContact").value = "";
+      document.getElementById("payEmail").value = "";
       document.getElementById("payNote").value = "";
       document.getElementById("payVoucher").value = "";
     } catch (e) {
@@ -714,29 +741,50 @@
   // ---------- Live asset ticker ----------
   const ARROW = { up: "▲", down: "▼", flat: "◆" };
 
+  // Single render path for ticker data, regardless of whether it arrived
+  // via the REST poll below or a WebSocket delta (ws.js writes into the
+  // same AppState.market.ticker path) — avoids the two having slightly
+  // different rendering logic that could drift out of sync over time.
+  function renderTicker(list) {
+    const track = document.getElementById("tickerTrack");
+    if (!list || !list.length) {
+      track.textContent = "Market data unavailable.";
+      return;
+    }
+    track.innerHTML = list.map(t => {
+      const cls = !t.feed_healthy ? "t-stale" : (t.change === "up" ? "t-up" : t.change === "down" ? "t-down" : "");
+      const priceText = t.price != null ? t.price.toFixed(5) : "—";
+      const label = t.asset.replace(/(.{3})(.{3})/, "$1/$2");
+      return `<span class="t-item ${cls}">${label} ${priceText} ${t.feed_healthy ? ARROW[t.change] : "…"}</span>`;
+    }).join("");
+  }
+
   async function refreshTicker() {
+    // Sequence guard: on a slow/congested connection a poll can resolve
+    // after a later one already landed. Without this, the ticker can
+    // flash back to older prices for a frame — harmless-looking, but the
+    // same pattern in the signal result below is not harmless, so both
+    // use the same guard for consistency.
+    const token = AppState.beginRequest("ticker");
     try {
       const res = await fetch(`${BACKEND_URL}/assets/ticker`);
       const data = await res.json();
-      const track = document.getElementById("tickerTrack");
-      if (!data.ticker || !data.ticker.length) {
-        track.textContent = "Market data unavailable.";
-        return;
-      }
-      track.innerHTML = data.ticker.map(t => {
-        const cls = !t.feed_healthy ? "t-stale" : (t.change === "up" ? "t-up" : t.change === "down" ? "t-down" : "");
-        const priceText = t.price != null ? t.price.toFixed(5) : "—";
-        const label = t.asset.replace(/(.{3})(.{3})/, "$1/$2");
-        return `<span class="t-item ${cls}">${label} ${priceText} ${t.feed_healthy ? ARROW[t.change] : "…"}</span>`;
-      }).join("");
+      if (!AppState.isCurrent("ticker", token)) return; // a newer poll already started
+      AppState.set("market.ticker", data.ticker || []);
     } catch (e) {
       // silent — the ticker is decorative, never worth an error banner
     }
   }
 
   function initTicker() {
+    AppState.subscribe("market.ticker", renderTicker);
     refreshTicker();
-    setInterval(refreshTicker, 20000);
+    // This REST poll is now a fallback/initial-paint path, not the
+    // primary feed — ws.js delivers live updates in near-real-time over
+    // the WebSocket when connected. Slowed from 20s to 60s accordingly:
+    // still catches the case where the socket has been down a while,
+    // without polling on top of an already-live connection.
+    setInterval(refreshTicker, 60000);
   }
 
   // ---------- Audio cue on signal generation ----------
@@ -845,6 +893,14 @@
     const licenseKey = getSavedLicenseKey();
     const asset = document.getElementById("asset").value;
     const durationSeconds = parseInt(document.getElementById("duration").value, 10);
+    AppState.set("market.asset", asset);
+    AppState.set("market.duration_seconds", durationSeconds);
+
+    // Sequence guard: if the user changes the asset and clicks Generate
+    // again before this request returns, this token becomes stale and
+    // the earlier response must never overwrite the newer one on screen
+    // — that would silently show a signal for the wrong asset.
+    const token = AppState.beginRequest("generateSignal");
 
     btn.disabled = true;
     btn.textContent = "Generating...";
@@ -861,6 +917,12 @@
         }),
       });
       const data = await res.json();
+      if (!AppState.isCurrent("generateSignal", token)) {
+        // A newer request already started (different asset/click) — drop
+        // this response entirely. The finally block below has its own
+        // staleness check, so it won't touch the button on the way out.
+        return;
+      }
       if (!res.ok) {
         errorEl.textContent = data.detail || "Request failed.";
         if (res.status === 401 || res.status === 403) {
@@ -868,6 +930,7 @@
           errorEl.textContent += " Your key may have expired — please re-enter it.";
         }
       } else {
+        AppState.set("market.lastSignal", data);
         resultEl.className = data.signal;
         resultEl.style.display = "block";
         const tier = confidenceTier(data.confidence);
@@ -898,10 +961,10 @@
         // Grounds the AI chat in the real, current indicator output instead
         // of it having to guess or generalize when asked "why" / "what about
         // EURUSD right now" — see sendChatMessage() below.
-        lastSignalContext = {
+        AppState.set("chat.lastSignalContext", {
           asset, signal: data.signal, confidence: data.confidence,
           explanation: data.explanation, feed_healthy: data.feed_healthy,
-        };
+        });
         if (data.signal !== "WAIT") {
           const copyBtn = document.getElementById("copySignalBtn");
           if (copyBtn) {
@@ -912,10 +975,17 @@
         refreshSignalHistory();
       }
     } catch (e) {
-      errorEl.textContent = "Could not reach backend. Is it running?";
+      if (AppState.isCurrent("generateSignal", token)) {
+        errorEl.textContent = "Could not reach backend. Is it running?";
+      }
     } finally {
-      btn.disabled = false;
-      btn.textContent = "Generate Signal";
+      // Guard here too: a slow, now-superseded request finishing after a
+      // newer one started must not flip the button back to idle while
+      // that newer request is still pending.
+      if (AppState.isCurrent("generateSignal", token)) {
+        btn.disabled = false;
+        btn.textContent = "Generate Signal";
+      }
     }
   });
 
@@ -972,11 +1042,13 @@
   const chatPanel = document.getElementById("chatPanel");
   const chatMessages = document.getElementById("chatMessages");
   const chatInput = document.getElementById("chatInput");
-  let lastSignalContext = null; // set by the generateBtn handler above
-  let chatHistory = []; // [{role: "user"|"model", text: "..."}], kept client-side only
+  // lastSignalContext and chat history now live in AppState.chat — set by
+  // the generateBtn handler above and read here, so there's one source of
+  // truth instead of a global this file and AppState could disagree about.
 
   document.getElementById("chatToggle").addEventListener("click", () => {
     chatPanel.classList.toggle("hidden");
+    AppState.set("ui.chatOpen", !chatPanel.classList.contains("hidden"));
   });
 
   function addChatMessage(text, fromUser) {
@@ -993,7 +1065,8 @@
     if (!text) return;
     addChatMessage(text, true);
     chatInput.value = "";
-    chatHistory.push({ role: "user", text });
+    const history = AppState.get("chat.history").concat([{ role: "user", text }]);
+    AppState.set("chat.history", history);
 
     try {
       const res = await fetch(`${BACKEND_URL}/support/chat`, {
@@ -1001,14 +1074,14 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          history: chatHistory.slice(0, -1).slice(-10), // last 10 turns, excluding the message just sent
-          signal_context: lastSignalContext,
+          history: history.slice(0, -1).slice(-10), // last 10 turns, excluding the message just sent
+          signal_context: AppState.get("chat.lastSignalContext"),
         }),
       });
       const data = await res.json();
       const reply = res.ok ? data.reply : (data.detail || "Something went wrong.");
       addChatMessage(reply, false);
-      if (res.ok) chatHistory.push({ role: "model", text: reply });
+      if (res.ok) AppState.set("chat.history", AppState.get("chat.history").concat([{ role: "model", text: reply }]));
     } catch (e) {
       addChatMessage("Could not reach support chat right now.", false);
     }

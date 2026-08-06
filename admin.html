@@ -266,7 +266,7 @@
       const rows = data.orders.map(o => `
         <tr>
           <td>${o.email}</td>
-          <td>${o.plan_days} days</td>
+          <td>${o.plan_days} days${o.event_kind === "renewed" ? " (renewal)" : ""}</td>
           <td style="font-family:monospace">${o.license_key}</td>
           <td>${o.delivered ? "yes" : `no — send it! <button class="secondary" style="padding:4px 8px;font-size:11px;margin-left:6px" onclick="markPaddleDelivered('${o.id}')">Mark delivered</button>`}</td>
         </tr>`).join("");
@@ -297,8 +297,8 @@
       const rows = pending.map(r => `
         <tr>
           <td>${r.name}</td>
-          <td>${r.contact}</td>
-          <td>${r.plan_days} days</td>
+          <td>${r.contact}${r.email ? `<br><span style="opacity:0.7;font-size:11px">${r.email}</span>` : ""}</td>
+          <td>${r.plan_id || "premium"}</td>
           <td>${r.transaction_note || "<em>(none)</em>"}</td>
           <td>${r.voucher_filename ? `<button class="secondary" style="padding:4px 8px;font-size:11px" onclick="viewVoucher('${r.voucher_filename}')">View</button>` : "<em>none</em>"}</td>
           <td class="actions">
