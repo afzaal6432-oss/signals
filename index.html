@@ -245,6 +245,9 @@
   </div>
 
   <h1>Quotex Signal Generator</h1>
+  <div class="sub" style="margin-top:-14px">
+    Have an account? <a href="./affiliate.html" style="color:var(--accent)">Log in, register, or view your affiliate dashboard</a>
+  </div>
 
   <!-- ===== SCREEN 1: BUY ACCESS (shown to anyone without a saved key) ===== -->
   <div id="buyScreen">
@@ -253,30 +256,30 @@
         Get access
         <button class="link login-pulse" id="showLicenseFormBtn" style="font-size:13px;padding:6px 12px;border:1px solid var(--accent);border-radius:20px;text-decoration:none">Already have a key? Log in</button>
       </h2>
-      <div class="sub">Choose a plan, fill in your details, then check the payment instructions below to complete payment.</div>
+      <div class="sub">Pick a plan and duration, fill in your details, then follow the payment instructions below. One request, one review — you'll see your key and your account plan activated together once it's approved.</div>
 
-      <!-- Plan catalog lives in app/accounts/plans.py — keep these two
-           options (and their prices) in sync with PLANS["premium"] /
-           PLANS["pro"] if you change pricing there. Manual approval and
-           Paddle checkout both read duration from that same file now,
-           so a plan_id chosen here grants exactly what the equivalent
-           Paddle purchase would. -->
-      <div class="plan-option selected" data-plan="premium">
-        <div><b>Premium</b> — $29/month</div>
-        <input type="radio" name="plan" value="premium" checked>
+      <!-- Plan tier + duration are loaded live from /accounts/plans so
+           pricing only ever needs to change in app/accounts/plans.py —
+           never here. -->
+      <div id="planTierOptions"></div>
+
+      <label style="margin-top:12px">Duration</label>
+      <div class="plan-option selected" data-duration="30">
+        <div><b>30 days</b> — <span id="priceMonthly">…</span></div>
+        <input type="radio" name="duration" value="30" checked>
       </div>
-      <div class="plan-option" data-plan="pro">
-        <div><b>Pro</b> — $79/month</div>
-        <input type="radio" name="plan" value="pro">
+      <div class="plan-option" data-duration="365">
+        <div><b>365 days</b> — <span id="priceYearly">…</span></div>
+        <input type="radio" name="duration" value="365">
       </div>
 
-      <label>Your name</label>
+      <label style="margin-top:16px">Your name</label>
       <input id="payName" type="text" placeholder="Your name">
 
       <label>Contact (WhatsApp number or email — we'll send your key here)</label>
       <input id="payContact" type="text" placeholder="+92XXXXXXXXXX or you@email.com">
 
-      <label>Account email (optional — if you have an account, your plan activates automatically once approved)</label>
+      <label>Account email (optional — links this payment to your registered account so your plan activates automatically)</label>
       <input id="payEmail" type="email" placeholder="you@email.com">
 
       <label>Transaction ID / note</label>
@@ -290,40 +293,29 @@
       <div id="paymentSuccess" class="success"></div>
 
       <label style="margin-top:20px">Payment instructions</label>
-      <div class="sub" id="paymentInstructions">
-        Send payment to one of the accounts below, then submit your
-        transaction ID / screenshot above so we can verify it and send
-        your key.
-        <div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
-          <b>JazzCash</b><br>
-          03455551040 &mdash; Afzaal Ahmed
-        </div>
-        <div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
-          <b>Easypaisa</b><br>
-          03455551040 &mdash; Afzaal Ahmed
-        </div>
-        <!-- BANK OF KHYBER: paste your account title, account number/IBAN,
-             and branch below, then uncomment this block.
-        <div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
-          <b>Bank of Khyber</b><br>
-          Account title: <br>
-          Account number / IBAN: <br>
-          Branch:
-        </div>
-        -->
-      </div>
+      <div class="sub" id="paymentInstructions">Loading payment details…</div>
+    </div>
+
+    <!-- Payment status tracking: check a previously-submitted request
+         without needing an account or contacting support. -->
+    <div class="card">
+      <h2 style="margin-top:0">Track your payment</h2>
+      <div class="sub">Already submitted a payment? Enter your request ID and the same contact info you used to check its status.</div>
+      <label>Request ID</label>
+      <input id="statusRequestId" type="text" placeholder="e.g. a1b2c3d4">
+      <label>Contact used at submission</label>
+      <input id="statusContact" type="text" placeholder="+92XXXXXXXXXX or you@email.com">
+      <button class="link" id="checkStatusBtn" style="margin-top:8px">Check status</button>
+      <div id="statusError" class="error"></div>
+      <div id="statusResult" class="sub" style="margin-top:10px"></div>
     </div>
 
     <div class="card" style="font-size:12px;color:var(--muted);line-height:1.5">
       Signals are generated from technical analysis of real market data and are provided for informational purposes only — they are not financial advice, and past performance does not guarantee future results. Trading involves risk of loss. You are responsible for your own trading decisions.
       <br><br>
-      Questions or issues? Contact: SUPPORT_CONTACT_HERE
+      Questions or issues? Contact: <span id="supportContactText">SUPPORT_CONTACT_HERE</span>
       <br><br>
-      <!-- Join our Telegram: this is a plain link to an announcement/
-           info channel — NOT a signal-generating bot. Replace
-           TELEGRAM_CHANNEL_LINK_HERE with your real channel link
-           (e.g. https://t.me/yourchannel) once you've created one. -->
-      Updates & announcements: <a href="TELEGRAM_CHANNEL_LINK_HERE" style="color:var(--accent)">Join our Telegram</a>
+      Updates & announcements: <a id="telegramLink" href="#" style="color:var(--accent)">Join our Telegram</a>
     </div>
   </div>
 
@@ -398,6 +390,27 @@
   // script. Set this once, right after your first Render deploy, and
   // you should never need to touch it again.
   const BACKEND_URL = "https://quotex-signal-backend.onrender.com";
+
+  // ---------- Affiliate program: capture ?ref=CODE on any landing ----------
+  // Stored in localStorage (not sessionStorage) so it survives the visitor
+  // closing the tab and coming back later to actually register on
+  // affiliate.html — a referral shouldn't be lost just because someone
+  // didn't sign up in the same browser session they clicked the link in.
+  // The click is only ever logged once per code per browser (a flag, not
+  // a counter) — repeated page reloads of the same link shouldn't inflate
+  // the affiliate's click count.
+  (function captureReferral() {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (!ref) return;
+    localStorage.setItem("pendingReferralCode", ref.toUpperCase());
+    const loggedKey = `refClickLogged_${ref.toUpperCase()}`;
+    if (!localStorage.getItem(loggedKey)) {
+      fetch(`${BACKEND_URL}/accounts/affiliate/click?code=${encodeURIComponent(ref)}`, { method: "POST" })
+        .then(() => localStorage.setItem(loggedKey, "1"))
+        .catch(() => {}); // best-effort — a failed click log should never block the page
+    }
+  })();
 
   // ---------- persistent device token (per-browser device lock) ----------
   // NOTE ON "HARDWARE LOCK" HERE: a web browser deliberately can't read
@@ -613,12 +626,80 @@
     showScreen("licenseScreen");
   });
 
-  document.querySelectorAll(".plan-option").forEach(el => {
-    el.addEventListener("click", () => {
-      document.querySelectorAll(".plan-option").forEach(o => o.classList.remove("selected"));
-      el.classList.add("selected");
-      el.querySelector("input[type=radio]").checked = true;
-    });
+  // ----- Single subscription page: plan tiers, duration, live payment
+  // settings, submission, and status tracking. -----
+  let SELECTED_PLAN_ID = null;
+  let PLAN_CATALOG = [];
+
+  function selectPlanOption(groupSelector, el) {
+    document.querySelectorAll(groupSelector).forEach(o => o.classList.remove("selected"));
+    el.classList.add("selected");
+    const radio = el.querySelector("input[type=radio]");
+    if (radio) radio.checked = true;
+  }
+
+  function updateDurationPrices() {
+    const plan = PLAN_CATALOG.find(p => p.id === SELECTED_PLAN_ID);
+    document.getElementById("priceMonthly").textContent = plan ? `$${plan.price_usd_monthly}/30 days` : "…";
+    document.getElementById("priceYearly").textContent = plan ? `$${plan.price_usd_yearly}/365 days` : "…";
+  }
+
+  async function loadPlanTiers() {
+    const container = document.getElementById("planTierOptions");
+    try {
+      const res = await fetch(`${BACKEND_URL}/accounts/plans`);
+      PLAN_CATALOG = await res.json();
+      container.innerHTML = "";
+      PLAN_CATALOG.forEach((plan, i) => {
+        const div = document.createElement("div");
+        div.className = "plan-option" + (i === 0 ? " selected" : "");
+        div.dataset.plan = plan.id;
+        div.innerHTML = `<div><b>${plan.name}</b> — ${plan.description || ""}</div>
+          <input type="radio" name="planTier" value="${plan.id}" ${i === 0 ? "checked" : ""}>`;
+        div.addEventListener("click", () => {
+          selectPlanOption("#planTierOptions .plan-option", div);
+          SELECTED_PLAN_ID = plan.id;
+          updateDurationPrices();
+        });
+        container.appendChild(div);
+      });
+      if (PLAN_CATALOG.length) {
+        SELECTED_PLAN_ID = PLAN_CATALOG[0].id;
+        updateDurationPrices();
+      }
+    } catch (e) {
+      container.innerHTML = "<div class='error'>Couldn't load plans — check BACKEND_URL / that the server is running.</div>";
+    }
+  }
+
+  async function loadPaymentSettings() {
+    const el = document.getElementById("paymentInstructions");
+    try {
+      const res = await fetch(`${BACKEND_URL}/payment/settings`);
+      const s = await res.json();
+      let html = `${s.instructions}<br>`;
+      if (s.jazzcash_number) {
+        html += `<div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px"><b>JazzCash</b><br>${s.jazzcash_number}${s.jazzcash_account_title ? " — " + s.jazzcash_account_title : ""}</div>`;
+      }
+      if (s.easypaisa_number) {
+        html += `<div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px"><b>Easypaisa</b><br>${s.easypaisa_number}${s.easypaisa_account_title ? " — " + s.easypaisa_account_title : ""}</div>`;
+      }
+      if (s.bank_account_number) {
+        html += `<div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px"><b>${s.bank_name || "Bank transfer"}</b><br>Account title: ${s.bank_account_title || ""}<br>Account number / IBAN: ${s.bank_account_number}<br>Branch: ${s.bank_branch || ""}</div>`;
+      }
+      el.innerHTML = html;
+      if (s.support_contact) document.getElementById("supportContactText").textContent = s.support_contact;
+      if (s.telegram_link) document.getElementById("telegramLink").href = s.telegram_link;
+    } catch (e) {
+      el.textContent = "Couldn't load payment details — check BACKEND_URL / that the server is running.";
+    }
+  }
+
+  loadPlanTiers();
+  loadPaymentSettings();
+
+  document.querySelectorAll("#buyScreen .plan-option[data-duration]").forEach(el => {
+    el.addEventListener("click", () => selectPlanOption("#buyScreen .plan-option[data-duration]", el));
   });
 
   document.getElementById("submitPaymentBtn").addEventListener("click", async () => {
@@ -630,20 +711,25 @@
     const contact = document.getElementById("payContact").value.trim();
     const email = document.getElementById("payEmail").value.trim();
     const note = document.getElementById("payNote").value.trim();
-    const planId = document.querySelector('input[name="plan"]:checked').value;
+    const durationDays = parseInt(document.querySelector('input[name="duration"]:checked').value, 10);
     const voucherFile = document.getElementById("payVoucher").files[0];
 
     if (!name || !contact) {
       errorEl.textContent = "Please fill in your name and contact info.";
       return;
     }
+    if (!SELECTED_PLAN_ID) {
+      errorEl.textContent = "Please choose a plan.";
+      return;
+    }
 
     const formData = new FormData();
     formData.append("name", name);
     formData.append("contact", contact);
-    formData.append("plan_id", planId);
-    if (email) formData.append("email", email);
+    formData.append("plan_id", SELECTED_PLAN_ID);
+    formData.append("duration_days", durationDays);
     formData.append("transaction_note", note);
+    if (email) formData.append("email", email);
     if (voucherFile) formData.append("voucher_image", voucherFile);
 
     try {
@@ -653,14 +739,43 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Submission failed.");
-      successEl.textContent = data.message;
+      successEl.textContent = `${data.message} Your request ID is ${data.request_id} — save it to check your status below.`;
       document.getElementById("payName").value = "";
       document.getElementById("payContact").value = "";
-      document.getElementById("payEmail").value = "";
       document.getElementById("payNote").value = "";
       document.getElementById("payVoucher").value = "";
+      document.getElementById("statusRequestId").value = data.request_id;
+      document.getElementById("statusContact").value = contact;
     } catch (e) {
       errorEl.textContent = e.message || "Could not submit. Try again.";
+    }
+  });
+
+  document.getElementById("checkStatusBtn").addEventListener("click", async () => {
+    const statusErrorEl = document.getElementById("statusError");
+    const statusResultEl = document.getElementById("statusResult");
+    statusErrorEl.textContent = ""; statusResultEl.textContent = "";
+
+    const requestId = document.getElementById("statusRequestId").value.trim();
+    const contact = document.getElementById("statusContact").value.trim();
+    if (!requestId || !contact) {
+      statusErrorEl.textContent = "Enter both the request ID and the contact info you submitted.";
+      return;
+    }
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/payment/status/${encodeURIComponent(requestId)}?contact=${encodeURIComponent(contact)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Couldn't find that request.");
+      const statusLabels = {
+        pending: "⏳ Pending review",
+        approved: "✅ Approved — check your contact info for your key",
+        rejected: "❌ Rejected" + (data.reviewed_note ? `: ${data.reviewed_note}` : ""),
+        dismissed: "Dismissed",
+      };
+      statusResultEl.textContent = statusLabels[data.status] || data.status;
+    } catch (e) {
+      statusErrorEl.textContent = e.message || "Could not check status. Try again.";
     }
   });
 
@@ -1055,7 +1170,13 @@
     const div = document.createElement("div");
     div.style.marginBottom = "10px";
     div.style.textAlign = fromUser ? "right" : "left";
-    div.innerHTML = `<span style="display:inline-block;padding:8px 10px;border-radius:8px;background:${fromUser ? 'var(--accent)' : '#262b36'};color:${fromUser ? '#fff' : 'var(--text)'};max-width:85%">${text}</span>`;
+    const bubble = document.createElement("span");
+    bubble.style.cssText = `display:inline-block;padding:8px 10px;border-radius:8px;background:${fromUser ? 'var(--accent)' : '#262b36'};color:${fromUser ? '#fff' : 'var(--text)'};max-width:85%;white-space:pre-wrap`;
+    // textContent, not innerHTML — this renders both the person's own
+    // typed message and the AI's reply, so neither a user pasting HTML
+    // into the chat box nor a prompt-injected reply can execute here.
+    bubble.textContent = text;
+    div.appendChild(bubble);
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }

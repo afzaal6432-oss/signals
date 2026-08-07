@@ -2,41 +2,103 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quotex Signal App — Admin</title>
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --border: #262b36; --text: #e8eaed;
-    --muted: #8b92a4; --accent: #4f8cff; --green: #35c46a; --red: #ff5a5a;
+    --bg: #0f1115; --panel: #171a21; --panel2: #1b1f28; --border: #262b36; --text: #e8eaed;
+    --muted: #8b92a4; --accent: #4f8cff; --green: #35c46a; --red: #ff5a5a; --amber: #f5a623;
   }
   * { box-sizing: border-box; }
   body { background: var(--bg); color: var(--text); font-family: -apple-system, Segoe UI, Roboto, sans-serif;
-         margin: 0; padding: 32px; }
-  h1 { font-size: 20px; margin-bottom: 4px; }
-  .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
-  .gate, .panel { max-width: 900px; margin: 0 auto; }
-  .gate { max-width: 380px; margin-top: 80px; text-align: center; }
-  input, button, select { font-size: 14px; padding: 9px 12px; border-radius: 8px;
-         border: 1px solid var(--border); background: #1d212b; color: var(--text); }
-  input { width: 100%; margin-bottom: 10px; }
-  button { background: var(--accent); border: none; cursor: pointer; font-weight: 600; }
+         margin: 0; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h3 { margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 4px; }
+  .gate { max-width: 380px; margin: 80px auto; text-align: center; }
+  input, button, select, textarea { font-size: 14px; padding: 9px 12px; border-radius: 8px;
+         border: 1px solid var(--border); background: #1d212b; color: var(--text); font-family: inherit; }
+  input, select, textarea { width: 100%; margin-bottom: 10px; }
+  textarea { resize: vertical; min-height: 60px; }
+  button { background: var(--accent); border: none; cursor: pointer; font-weight: 600; white-space: nowrap; }
   button:hover { opacity: 0.9; }
   button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
   button.danger { background: var(--red); }
+  button.success { background: var(--green); }
+  button:disabled { opacity: 0.5; cursor: default; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
           padding: 20px; margin-bottom: 20px; }
   .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
   .row > div { flex: 1; min-width: 140px; }
   label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 500; }
-  .status-active { color: var(--green); font-weight: 600; }
-  .status-revoked { color: var(--red); font-weight: 600; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; position: sticky; top: 0; background: var(--panel); }
+  .status-active, .pill-active { color: var(--green); font-weight: 600; }
+  .status-revoked, .pill-banned { color: var(--red); font-weight: 600; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .pill-none { background: #2a2f3a; color: var(--muted); }
+  .pill-premium { background: #2a2350; color: #b39dff; }
+  .pill-pro { background: #3a2a12; color: var(--amber); }
+  .pill-pending { background: rgba(227,178,60,0.15); color: var(--amber); }
+  .pill-approved { background: rgba(79,140,255,0.15); color: #7aa5ff; }
+  .pill-paid { background: rgba(53,196,106,0.15); color: var(--green); }
+  .pill-rejected { background: rgba(255,90,90,0.15); color: var(--red); }
   .new-key { background: #14251c; border: 1px solid var(--green); border-radius: 8px;
              padding: 14px; margin-top: 12px; font-family: monospace; font-size: 15px; }
   .error { color: var(--red); font-size: 13px; margin-top: 8px; }
-  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .actions button { padding: 5px 10px; font-size: 12px; margin-right: 6px; }
+  .success-msg { color: var(--green); font-size: 13px; margin-top: 8px; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+  .actions button { padding: 5px 10px; font-size: 12px; margin-right: 6px; margin-bottom: 4px; }
+
+  /* App shell */
+  #app { display: none; }
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; flex: 0 0 220px; background: var(--panel); border-right: 1px solid var(--border);
+             padding: 20px 12px; }
+  .sidebar .brand { font-weight: 700; font-size: 15px; padding: 0 10px 18px; }
+  .sidebar .brand .sub { margin: 0; }
+  .navbtn { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: transparent;
+            border: none; color: var(--muted); padding: 10px 12px; border-radius: 8px; font-weight: 500;
+            margin-bottom: 2px; cursor: pointer; }
+  .navbtn:hover { background: var(--panel2); color: var(--text); }
+  .navbtn.active { background: var(--accent); color: white; }
+  .main { flex: 1; padding: 28px 32px; max-width: 1200px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .stat-card .label { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .stat-card .value { font-size: 26px; font-weight: 700; }
+  .stat-card .value.green { color: var(--green); }
+  .stat-card .value.amber { color: var(--amber); }
+
+  .sparkline { display: flex; align-items: flex-end; gap: 3px; height: 60px; margin-top: 8px; }
+  .sparkline .bar { flex: 1; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 2px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+                   align-items: center; justify-content: center; z-index: 50; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 22px;
+           max-width: 560px; width: 90%; max-height: 85vh; overflow-y: auto; }
+  .modal .toolbar { margin-bottom: 14px; }
+  .kv { font-size: 13px; margin-bottom: 4px; }
+  .kv b { color: var(--muted); font-weight: 500; }
+
+  .health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .health-chip { padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .dot.ok { background: var(--green); } .dot.bad { background: var(--red); }
+
+  .log-row.WARNING { color: var(--amber); }
+  .log-row.ERROR, .log-row.CRITICAL { color: var(--red); }
+  @media (max-width: 800px) {
+    .shell { flex-direction: column; }
+    .sidebar { width: 100%; flex: none; display: flex; overflow-x: auto; padding: 10px; }
+    .navbtn { flex: 0 0 auto; }
+    .main { padding: 16px; }
+  }
 </style>
 </head>
 <body>
@@ -44,174 +106,465 @@
 <div id="gate" class="gate">
   <h1>Admin Login</h1>
   <div class="sub">Enter the admin secret configured in config.yaml</div>
-  <input id="secretInput" type="password" placeholder="Admin secret">
+  <input id="secretInput" type="password" placeholder="Admin secret" onkeydown="if(event.key==='Enter')login()">
   <button onclick="login()" style="width:100%">Enter</button>
   <div id="gateError" class="error"></div>
 </div>
 
-<div id="panel" class="panel" style="display:none">
-  <div class="toolbar">
-    <div>
-      <h1>Quotex Signal App — License Admin</h1>
-      <div class="sub">Backend: <span id="backendUrl"></span></div>
+<div id="app">
+  <div class="shell">
+    <div class="sidebar">
+      <div class="brand">Quotex Signal App<div class="sub">Admin panel · <span id="backendUrl"></span></div></div>
+      <button class="navbtn active" data-tab="dashboard" onclick="showTab('dashboard')">📊 Dashboard</button>
+      <button class="navbtn" data-tab="users" onclick="showTab('users')">👤 Users</button>
+      <button class="navbtn" data-tab="licenses" onclick="showTab('licenses')">🔑 Licenses</button>
+      <button class="navbtn" data-tab="referrals" onclick="showTab('referrals')">🔗 Referrals</button>
+      <button class="navbtn" data-tab="affiliates" onclick="showTab('affiliates')">💰 Affiliates</button>
+      <button class="navbtn" data-tab="broadcast" onclick="showTab('broadcast')">📣 Broadcast</button>
+      <button class="navbtn" data-tab="settings" onclick="showTab('settings')">⚙️ Settings</button>
+      <button class="navbtn" data-tab="health" onclick="showTab('health')">💓 System health</button>
+      <button class="navbtn" data-tab="logs" onclick="showTab('logs')">🪵 Error logs</button>
+      <button class="navbtn" onclick="logout()" style="margin-top:16px">↩ Log out</button>
     </div>
-    <button class="secondary" onclick="logout()">Log out</button>
-  </div>
 
-  <div class="card">
-    <h3 style="margin-top:0">Generate a new key</h3>
-    <div class="row">
-      <div>
-        <label>Label (e.g. customer email)</label>
-        <input id="genLabel" placeholder="customer@example.com">
-      </div>
-      <div>
-        <label>Expires in (days, 0 = never)</label>
-        <input id="genDays" type="number" value="30">
-      </div>
-      <div>
-        <label>Max concurrent sessions</label>
-        <input id="genSessions" type="number" placeholder="default from config">
-      </div>
-      <div style="flex: 0 0 auto">
-        <button onclick="generateKey()">Generate</button>
-      </div>
-    </div>
-    <div id="newKeyBox"></div>
-    <div id="genError" class="error"></div>
-  </div>
+    <div class="main">
 
-  <div class="card">
-    <div class="toolbar">
-      <h3 style="margin:0">Saved keys by name</h3>
-      <button class="secondary" onclick="loadKeyRegistry()">Refresh</button>
-    </div>
-    <div class="sub">Every key ever issued, searchable by name -- no more one-time popups. See ADMIN_GUIDE.md for the security tradeoff this represents.</div>
-    <div class="row" style="margin:10px 0">
-      <div>
-        <input id="registrySearchInput" placeholder="Search by name..." onkeydown="if(event.key==='Enter')searchKeyRegistry()">
+      <!-- ================= DASHBOARD ================= -->
+      <div class="tab-content active" id="tab-dashboard">
+        <div class="toolbar"><h1>Dashboard</h1><button class="secondary" onclick="loadDashboard()">Refresh</button></div>
+        <div class="stat-grid" id="statGrid">
+          <div class="stat-card"><div class="label">Total users</div><div class="value" id="statTotalUsers">—</div></div>
+          <div class="stat-card"><div class="label">Active users</div><div class="value green" id="statActiveUsers">—</div></div>
+          <div class="stat-card"><div class="label">Premium users</div><div class="value amber" id="statPremiumUsers">—</div></div>
+          <div class="stat-card"><div class="label">Revenue (total)</div><div class="value" id="statRevenue">—</div></div>
+          <div class="stat-card"><div class="label">Revenue (30d)</div><div class="value" id="statRevenue30d">—</div></div>
+          <div class="stat-card"><div class="label">Signups today</div><div class="value" id="statSignupsToday">—</div></div>
+          <div class="stat-card"><div class="label">Signups (7d)</div><div class="value" id="statSignups7d">—</div></div>
+          <div class="stat-card"><div class="label">Total referrals</div><div class="value" id="statReferrals">—</div></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:10px">Signups — last 14 days</h3>
+          <div class="sparkline" id="signupSparkline"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:10px">Plan breakdown</h3>
+          <div id="planBreakdown" class="sub">loading...</div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:6px">Pending payment requests</h3>
+          <div class="sub">There are <b id="statPendingPayments">—</b> requests awaiting review. See the Licenses tab.</div>
+        </div>
       </div>
-      <div style="flex: 0 0 auto">
-        <button class="secondary" onclick="searchKeyRegistry()">Search</button>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr><th>Name</th><th>Key</th><th>Source</th><th>Issued</th><th>Actions</th></tr>
-      </thead>
-      <tbody id="keyRegistryBody"></tbody>
-    </table>
-  </div>
 
-  <div class="card">
-    <div class="toolbar">
-      <h3 style="margin:0">All keys</h3>
-      <button class="secondary" onclick="loadKeys()">Refresh</button>
-    </div>
-    <div class="row" style="margin-bottom:12px">
-      <div>
-        <input id="keySearchInput" placeholder="Search by customer name or email..." onkeydown="if(event.key==='Enter')searchKeysByName()">
+      <!-- ================= USERS ================= -->
+      <div class="tab-content" id="tab-users">
+        <div class="toolbar"><h1>Users</h1><button class="secondary" onclick="searchUsers()">Refresh</button></div>
+        <div class="card">
+          <div class="row">
+            <div><label>Search (email, name, or ID)</label><input id="userSearchInput" placeholder="jane@example.com" onkeydown="if(event.key==='Enter')searchUsers()"></div>
+            <div><label>Status</label>
+              <select id="userStatusFilter" onchange="searchUsers()">
+                <option value="">All</option><option value="active">Active</option><option value="banned">Banned</option>
+              </select>
+            </div>
+            <div><label>Plan</label>
+              <select id="userPlanFilter" onchange="searchUsers()">
+                <option value="">All</option><option value="none">No plan</option><option value="premium">Premium</option><option value="pro">Pro</option>
+              </select>
+            </div>
+            <div style="flex:0 0 auto"><button onclick="searchUsers()">Search</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <table>
+            <thead><tr><th>ID</th><th>Email</th><th>Name</th><th>Status</th><th>Plan</th><th>Renews</th><th>Joined</th><th>Actions</th></tr></thead>
+            <tbody id="usersBody"></tbody>
+          </table>
+          <div class="toolbar" style="margin-top:10px">
+            <div class="sub" id="usersPageInfo"></div>
+            <div>
+              <button class="secondary" onclick="changeUserPage(-1)">◀ Prev</button>
+              <button class="secondary" onclick="changeUserPage(1)">Next ▶</button>
+            </div>
+          </div>
+          <div id="usersError" class="error"></div>
+        </div>
       </div>
-      <div style="flex: 0 0 auto">
-        <button class="secondary" onclick="searchKeysByName()">Search</button>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr><th>ID</th><th>Label</th><th>Status</th><th>Expires</th><th>Max sessions</th><th>Actions</th></tr>
-      </thead>
-      <tbody id="keysBody"></tbody>
-    </table>
-    <div id="listError" class="error"></div>
-  </div>
 
-  <div class="card">
-    <h3 style="margin-top:0">Extend a key</h3>
-    <div class="row">
-      <div>
-        <label>License key</label>
-        <input id="extendKey" placeholder="QX-XXXX-XXXX-XXXX-XXXX">
-      </div>
-      <div>
-        <label>Additional days</label>
-        <input id="extendDays" type="number" value="30">
-      </div>
-      <div style="flex: 0 0 auto">
-        <button onclick="extendKey()">Extend</button>
-      </div>
-    </div>
-    <div id="extendError" class="error"></div>
-  </div>
+      <!-- ================= LICENSES (existing key management, now a tab) ================= -->
+      <div class="tab-content" id="tab-licenses">
+        <div class="toolbar"><h1>License management</h1></div>
 
-  <div class="card">
-    <h3 style="margin-top:0">Site notice banner</h3>
-    <div class="sub">Shown at the top of the app for everyone (e.g. "Server under maintenance, back by 5pm"). Leave empty to hide it.</div>
-    <div class="row" style="margin-top:10px">
-      <div>
-        <input id="siteNoticeInput" placeholder="Leave empty for no notice">
-      </div>
-      <div style="flex: 0 0 auto">
-        <button onclick="updateSiteNotice()">Update</button>
-      </div>
-    </div>
-    <div id="siteNoticeSuccess" style="color:var(--green);font-size:13px;margin-top:8px"></div>
-  </div>
+        <div class="card">
+          <h3 style="margin-bottom:14px">Generate a new key</h3>
+          <div class="row">
+            <div><label>Label (e.g. customer email)</label><input id="genLabel" placeholder="customer@example.com"></div>
+            <div><label>Expires in (days, 0 = never)</label><input id="genDays" type="number" value="30"></div>
+            <div><label>Max concurrent sessions</label><input id="genSessions" type="number" placeholder="default from config"></div>
+            <div style="flex: 0 0 auto"><button onclick="generateKey()">Generate</button></div>
+          </div>
+          <div id="newKeyBox"></div>
+          <div id="genError" class="error"></div>
+        </div>
 
-  <div class="card">
-    <h3 style="margin-top:0">Market data API key</h3>
-    <div class="sub">Current: <span id="currentKeyMasked">loading...</span></div>
-    <div class="row" style="margin-top:10px">
-      <div>
-        <label>New Twelve Data API key</label>
-        <input id="newApiKey" type="password" placeholder="Paste new key here">
-      </div>
-      <div style="flex: 0 0 auto">
-        <button onclick="updateApiKey()">Update — takes effect immediately</button>
-      </div>
-    </div>
-    <div id="apiKeyError" class="error"></div>
-    <div id="apiKeySuccess" style="color:var(--green);font-size:13px;margin-top:8px"></div>
-  </div>
+        <div class="card">
+          <div class="toolbar"><h3>Saved keys by name</h3><button class="secondary" onclick="loadKeyRegistry()">Refresh</button></div>
+          <div class="sub">Every key ever issued, searchable by name.</div>
+          <div class="row" style="margin:10px 0">
+            <div><input id="registrySearchInput" placeholder="Search by name..." onkeydown="if(event.key==='Enter')searchKeyRegistry()"></div>
+            <div style="flex: 0 0 auto"><button class="secondary" onclick="searchKeyRegistry()">Search</button></div>
+          </div>
+          <table><thead><tr><th>Name</th><th>Key</th><th>Source</th><th>Issued</th><th>Actions</th></tr></thead>
+            <tbody id="keyRegistryBody"></tbody></table>
+        </div>
 
-  <div class="card">
-    <div class="toolbar">
-      <h3 style="margin:0">Pending payment requests</h3>
-      <button class="secondary" onclick="loadPaymentRequests()">Refresh</button>
-    </div>
-    <table>
-      <thead>
-        <tr><th>Name</th><th>Contact</th><th>Plan</th><th>Note</th><th>Voucher</th><th>Actions</th></tr>
-      </thead>
-      <tbody id="paymentRequestsBody"></tbody>
-    </table>
-    <div id="paymentRequestsError" class="error"></div>
-  </div>
+        <div class="card">
+          <div class="toolbar"><h3>All keys</h3><button class="secondary" onclick="loadKeys()">Refresh</button></div>
+          <div class="row" style="margin-bottom:12px">
+            <div><input id="keySearchInput" placeholder="Search by customer name or email..." onkeydown="if(event.key==='Enter')searchKeysByName()"></div>
+            <div style="flex: 0 0 auto"><button class="secondary" onclick="searchKeysByName()">Search</button></div>
+          </div>
+          <table><thead><tr><th>ID</th><th>Label</th><th>Status</th><th>Expires</th><th>Max sessions</th><th>Actions</th></tr></thead>
+            <tbody id="keysBody"></tbody></table>
+          <div id="listError" class="error"></div>
+        </div>
 
-  <div class="card">
-    <div class="toolbar">
-      <h3 style="margin:0">Paddle card-payment orders</h3>
-      <button class="secondary" onclick="loadPaddleOrders()">Refresh</button>
+        <div class="card">
+          <h3 style="margin-bottom:14px">Extend a key</h3>
+          <div class="row">
+            <div><label>License key</label><input id="extendKey" placeholder="QX-XXXX-XXXX-XXXX-XXXX"></div>
+            <div><label>Additional days</label><input id="extendDays" type="number" value="30"></div>
+            <div style="flex: 0 0 auto"><button onclick="extendKey()">Extend</button></div>
+          </div>
+          <div id="extendError" class="error"></div>
+        </div>
+
+        <div class="card">
+          <div class="toolbar"><h3>Pending payment requests</h3><button class="secondary" onclick="loadPaymentRequests()">Refresh</button></div>
+          <table><thead><tr><th>Name</th><th>Contact</th><th>Plan</th><th>Note</th><th>Voucher</th><th>Actions</th></tr></thead>
+            <tbody id="paymentRequestsBody"></tbody></table>
+          <div id="paymentRequestsError" class="error"></div>
+        </div>
+
+        <div class="card">
+          <div class="toolbar"><h3>Paddle card-payment orders</h3><button class="secondary" onclick="loadPaddleOrders()">Refresh</button></div>
+          <table><thead><tr><th>Email</th><th>Plan</th><th>Key</th><th>Delivered?</th></tr></thead>
+            <tbody id="paddleOrdersBody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ================= REFERRALS ================= -->
+      <div class="tab-content" id="tab-referrals">
+        <div class="toolbar"><h1>Referrals</h1><button class="secondary" onclick="loadReferrals()">Refresh</button></div>
+        <div class="card">
+          <h3 style="margin-bottom:10px">Top referrers</h3>
+          <table><thead><tr><th>User</th><th>Successful referrals</th></tr></thead>
+            <tbody id="topReferrersBody"></tbody></table>
+        </div>
+        <div class="card">
+          <div class="row" style="margin-bottom:6px">
+            <div><input id="referralSearchInput" placeholder="Search by referrer or referred email..." onkeydown="if(event.key==='Enter')loadReferrals(1)"></div>
+            <div style="flex:0 0 auto"><button class="secondary" onclick="loadReferrals(1)">Search</button></div>
+          </div>
+          <table><thead><tr><th>Referrer</th><th>Referred</th><th>Code</th><th>Rewarded</th><th>Date</th></tr></thead>
+            <tbody id="referralsBody"></tbody></table>
+          <div class="toolbar" style="margin-top:10px">
+            <div class="sub" id="referralsPageInfo"></div>
+            <div><button class="secondary" onclick="changeReferralPage(-1)">◀ Prev</button>
+              <button class="secondary" onclick="changeReferralPage(1)">Next ▶</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= AFFILIATE MANAGEMENT ================= -->
+      <div class="tab-content" id="tab-affiliates">
+        <div class="toolbar"><h1>Affiliate program</h1><button class="secondary" onclick="loadAffiliatesTab()">Refresh</button></div>
+
+        <div class="card">
+          <h3 style="margin-bottom:10px">Program settings</h3>
+          <div class="row">
+            <div><label><input type="checkbox" id="affEnabled" style="width:auto;margin-right:6px">Program enabled</label></div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div style="flex:1"><label>Commission per subscription (USD)</label><input id="affCommissionAmount" type="number" step="0.01" min="0"></div>
+            <div style="flex:1"><label>Minimum withdrawal (USD)</label><input id="affMinWithdrawal" type="number" step="0.01" min="0"></div>
+          </div>
+          <button class="secondary" style="margin-top:10px" onclick="saveAffiliateSettings()">Save settings</button>
+          <div id="affSettingsMsg" class="sub"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:10px">Overview</h3>
+          <div class="stat-grid" id="affStatsGrid"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:10px">Top affiliates</h3>
+          <table><thead><tr><th>Affiliate</th><th>Paid conversions</th><th>Total earnings</th></tr></thead>
+            <tbody id="topAffiliatesBody"></tbody></table>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:10px">All affiliates</h3>
+          <table><thead><tr><th>Affiliate</th><th>Code</th><th>Clicks</th><th>Registrations</th><th>Paid</th><th>Pending</th><th>Approved</th><th>Paid out</th></tr></thead>
+            <tbody id="affiliatesBody"></tbody></table>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:10px">Commissions</h3>
+          <div class="row" style="margin-bottom:6px">
+            <div>
+              <label>Filter by status</label>
+              <select id="commissionStatusFilter" onchange="loadCommissions(1)">
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="paid">Paid</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+          <table><thead><tr><th>Referrer</th><th>Referred</th><th>Plan</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+            <tbody id="commissionsBody"></tbody></table>
+          <div class="toolbar" style="margin-top:10px">
+            <div class="sub" id="commissionsPageInfo"></div>
+            <div><button class="secondary" onclick="changeCommissionPage(-1)">◀ Prev</button>
+              <button class="secondary" onclick="changeCommissionPage(1)">Next ▶</button></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:10px">Withdrawal requests</h3>
+          <div class="row" style="margin-bottom:6px">
+            <div>
+              <label>Filter by status</label>
+              <select id="withdrawalStatusFilter" onchange="loadWithdrawals(1)">
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="paid">Paid</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+          <table><thead><tr><th>Affiliate</th><th>Amount</th><th>Method</th><th>Destination</th><th>Status</th><th>Requested</th><th>Actions</th></tr></thead>
+            <tbody id="withdrawalsBody"></tbody></table>
+          <div class="toolbar" style="margin-top:10px">
+            <div class="sub" id="withdrawalsPageInfo"></div>
+            <div><button class="secondary" onclick="changeWithdrawalPage(-1)">◀ Prev</button>
+              <button class="secondary" onclick="changeWithdrawalPage(1)">Next ▶</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-content" id="tab-broadcast">
+        <div class="toolbar"><h1>Broadcast &amp; notifications</h1></div>
+        <div class="card">
+          <h3 style="margin-bottom:6px">Broadcast an announcement</h3>
+          <div class="sub">Sends an in-app notification to every user matching the chosen audience.</div>
+          <div class="row" style="margin-top:10px">
+            <div><label>Audience</label>
+              <select id="broadcastAudience">
+                <option value="all">All users</option>
+                <option value="active">Active users</option>
+                <option value="banned">Banned users</option>
+                <option value="premium">Premium/Pro users</option>
+                <option value="unsubscribed">Not currently subscribed</option>
+              </select>
+            </div>
+            <div><label>Category</label>
+              <select id="broadcastCategory">
+                <option value="system">System</option><option value="general">General</option>
+                <option value="billing">Billing</option><option value="security">Security</option>
+                <option value="signal">Signal</option>
+              </select>
+            </div>
+          </div>
+          <label>Title</label><input id="broadcastTitle" placeholder="e.g. Scheduled maintenance tonight">
+          <label>Message</label><textarea id="broadcastBody" placeholder="Optional details..."></textarea>
+          <button onclick="sendBroadcast()">Send broadcast</button>
+          <div id="broadcastError" class="error"></div>
+          <div id="broadcastSuccess" class="success-msg"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:6px">Send a notification to one user</h3>
+          <div class="row" style="margin-top:10px">
+            <div><label>User email or ID</label><input id="notifTarget" placeholder="jane@example.com or 42"></div>
+            <div><label>Category</label>
+              <select id="notifCategory">
+                <option value="general">General</option><option value="billing">Billing</option>
+                <option value="security">Security</option><option value="signal">Signal</option>
+                <option value="system">System</option>
+              </select>
+            </div>
+          </div>
+          <label>Title</label><input id="notifTitle" placeholder="e.g. Your question was answered">
+          <label>Message</label><textarea id="notifBody" placeholder="Optional details..."></textarea>
+          <button onclick="sendSingleNotification()">Send notification</button>
+          <div id="notifError" class="error"></div>
+          <div id="notifSuccess" class="success-msg"></div>
+        </div>
+      </div>
+
+      <!-- ================= SETTINGS ================= -->
+      <div class="tab-content" id="tab-settings">
+        <div class="toolbar"><h1>System settings</h1><button class="secondary" onclick="loadSettings()">Refresh</button></div>
+
+        <div class="card">
+          <h3 style="margin-bottom:10px">Overview</h3>
+          <div class="kv"><b>Market data provider:</b> <span id="settingProvider">—</span></div>
+          <div class="kv"><b>Turso (durable storage):</b> <span id="settingTurso">—</span></div>
+          <div class="kv"><b>Tracked assets:</b> <span id="settingAssets">—</span></div>
+          <div class="kv"><b>Rooms:</b> <span id="settingRooms">—</span></div>
+          <div class="kv"><b>Plans:</b> <span id="settingPlans">—</span></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top:0">Site notice banner</h3>
+          <div class="sub">Shown at the top of the app for everyone (e.g. "Server under maintenance, back by 5pm"). Leave empty to hide it.</div>
+          <div class="row" style="margin-top:10px">
+            <div><input id="siteNoticeInput" placeholder="Leave empty for no notice"></div>
+            <div style="flex: 0 0 auto"><button onclick="updateSiteNotice()">Update</button></div>
+          </div>
+          <div id="siteNoticeSuccess" class="success-msg"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top:0">Market data API key</h3>
+          <div class="sub">Current: <span id="currentKeyMasked">loading...</span></div>
+          <div class="row" style="margin-top:10px">
+            <div><label>New Twelve Data API key</label><input id="newApiKey" type="password" placeholder="Paste new key here"></div>
+            <div style="flex: 0 0 auto"><button onclick="updateApiKey()">Update — takes effect immediately</button></div>
+          </div>
+          <div id="apiKeyError" class="error"></div>
+          <div id="apiKeySuccess" class="success-msg"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:6px">Payment settings</h3>
+          <div class="sub">Shown on the customer subscription page's payment instructions. Update a phone number or account title here — no redeploy needed.</div>
+          <div class="row" style="margin-top:10px">
+            <div><label>JazzCash number</label><input id="psJazzcashNumber" placeholder="03XXXXXXXXX"></div>
+            <div><label>JazzCash account title</label><input id="psJazzcashTitle" placeholder="Account holder name"></div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div><label>Easypaisa number</label><input id="psEasypaisaNumber" placeholder="03XXXXXXXXX"></div>
+            <div><label>Easypaisa account title</label><input id="psEasypaisaTitle" placeholder="Account holder name"></div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div><label>Bank name</label><input id="psBankName" placeholder="e.g. Bank of Khyber"></div>
+            <div><label>Bank account title</label><input id="psBankTitle" placeholder="Account holder name"></div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div><label>Bank account number / IBAN</label><input id="psBankNumber" placeholder="Leave empty to hide the bank option"></div>
+            <div><label>Bank branch</label><input id="psBankBranch" placeholder="Branch name/code"></div>
+          </div>
+          <div style="margin-top:10px"><label>Payment instructions text</label><textarea id="psInstructions" rows="2"></textarea></div>
+          <div class="row" style="margin-top:10px">
+            <div><label>Support contact</label><input id="psSupportContact" placeholder="e.g. WhatsApp +92XXXXXXXXXX"></div>
+            <div><label>Telegram announcement link</label><input id="psTelegramLink" placeholder="https://t.me/yourchannel"></div>
+          </div>
+          <button style="margin-top:12px" onclick="updatePaymentSettings()">Save payment settings</button>
+          <div id="paymentSettingsError" class="error"></div>
+          <div id="paymentSettingsSuccess" class="success-msg"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:6px">Subscription renewals</h3>
+          <div class="sub">Expires any account whose plan has passed its renewal date, and sends a one-time "renewing soon" reminder to accounts within the reminder window. Wire this to a cron job to run automatically — or trigger it by hand here.</div>
+          <button style="margin-top:10px" onclick="processRenewals()">Run renewal sweep now</button>
+          <div id="renewalsResult" class="sub" style="margin-top:8px"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:6px">Payment history cleanup</h3>
+          <div class="sub">Permanently removes approved/rejected/dismissed payment requests (and their voucher images) older than the chosen number of days. Pending requests are never touched.</div>
+          <div class="row" style="margin-top:10px">
+            <div><label>Older than (days)</label><input id="cleanupDays" type="number" value="90"></div>
+            <div style="flex: 0 0 auto"><button class="secondary" onclick="cleanupPaymentHistory()">Clean up now</button></div>
+          </div>
+          <div id="cleanupResult" class="sub" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- ================= HEALTH ================= -->
+      <div class="tab-content" id="tab-health">
+        <div class="toolbar"><h1>System health</h1><button class="secondary" onclick="loadHealth()">Refresh</button></div>
+        <div class="card">
+          <div class="kv"><b>Overall status:</b> <span id="healthStatus">—</span></div>
+          <div class="kv"><b>Uptime:</b> <span id="healthUptime">—</span></div>
+          <div class="kv"><b>License DB reachable:</b> <span id="healthLicenseDb">—</span></div>
+          <div class="kv"><b>Durable storage (Turso):</b> <span id="healthTurso">—</span></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:10px">Market data feeds</h3>
+          <div class="health-grid" id="healthAssets"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:10px">WebSocket layer</h3>
+          <div class="kv"><b>Running:</b> <span id="healthWsRunning">—</span></div>
+          <div class="kv"><b>Total connections:</b> <span id="healthWsTotal">—</span></div>
+          <div class="health-grid" id="healthRooms" style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <!-- ================= ERROR LOGS ================= -->
+      <div class="tab-content" id="tab-logs">
+        <div class="toolbar">
+          <h1>Error logs</h1>
+          <div>
+            <select id="logLevelFilter" onchange="loadLogs()" style="width:auto;display:inline-block;margin-right:8px">
+              <option value="">All (warning+)</option>
+              <option value="WARNING">Warning</option>
+              <option value="ERROR">Error</option>
+              <option value="CRITICAL">Critical</option>
+            </select>
+            <button class="secondary" onclick="loadLogs()">Refresh</button>
+            <button class="danger" onclick="clearLogs()">Clear</button>
+          </div>
+        </div>
+        <div class="sub" style="margin-bottom:10px">In-memory only — resets on server restart. Shows the most recent 500 warning-or-worse log records.</div>
+        <div class="card">
+          <table><thead><tr><th>Time</th><th>Level</th><th>Logger</th><th>Message</th></tr></thead>
+            <tbody id="logsBody"></tbody></table>
+        </div>
+      </div>
+
     </div>
-    <div class="sub">Not set up yet? These stay empty until you configure Paddle — see ADMIN_GUIDE.md.</div>
-    <table>
-      <thead>
-        <tr><th>Email</th><th>Plan</th><th>Key</th><th>Delivered?</th></tr>
-      </thead>
-      <tbody id="paddleOrdersBody"></tbody>
-    </table>
+  </div>
+</div>
+
+<!-- User detail modal -->
+<div class="modal-overlay" id="userModalOverlay">
+  <div class="modal">
+    <div class="toolbar"><h3>User detail</h3><button class="secondary" onclick="closeUserModal()">Close</button></div>
+    <div id="userModalBody">loading...</div>
   </div>
 </div>
 
 <script>
-  // Detect "local preview" (file://, or any localhost/127.0.0.1 port —
-  // covers PyCharm's preview server, python -m http.server, etc.) and
-  // fall back to the tunnel URL in that case. On a real deployment
-  // (Netlify), window.location.origin IS the right backend-relative
-  // Render gives you ONE fixed URL for the life of the service — no more
-  // tunnel URLs that change on every restart. Set this once, right after
-  // your first Render deploy, and you should never need to touch it again.
+  // Same "detect local preview vs real deployment" fallback the original
+  // panel used. Render gives one fixed backend URL for the life of the
+  // service — set this once after your first deploy.
   const BACKEND = "https://quotex-signal-backend.onrender.com";
   document.getElementById("backendUrl").textContent = BACKEND;
+
+  // Every table below renders free text a customer or affiliate typed
+  // themselves (emails, names, notes, withdrawal method/destination,
+  // license labels, log messages) via innerHTML template literals,
+  // because building each row with createElement/textContent for ~20
+  // tables would be a lot of ceremony for a single-operator admin
+  // panel. esc() is what makes that safe: every such field MUST be
+  // wrapped in esc(...) before going into a template literal, so a
+  // value like `<img src=x onerror=...>` typed into, say, a withdrawal
+  // destination renders as inert text instead of running in the
+  // admin's browser session (which holds the admin secret).
+  function esc(value) {
+    if (value === null || value === undefined) return "";
+    return String(value).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
 
   function getSecret() { return sessionStorage.getItem("qx_admin_secret"); }
 
@@ -234,20 +587,19 @@
     return data;
   }
 
+  function fmtDate(s) { return s ? new Date(s).toLocaleString() : "—"; }
+  function fmtMoney(n) { return `$${Number(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`; }
+
+  // ---------------- Auth ----------------
   async function login() {
     const secret = document.getElementById("secretInput").value.trim();
     if (!secret) return;
     sessionStorage.setItem("qx_admin_secret", secret);
     document.getElementById("gateError").textContent = "";
     try {
-      await loadKeys(); // validates the secret against a real endpoint
-      await loadApiKeyStatus();
-      await loadPaymentRequests();
-      await loadPaddleOrders();
-      await loadSiteNotice();
-      await loadKeyRegistry();
+      await loadDashboard(); // validates the secret against a real endpoint
       document.getElementById("gate").style.display = "none";
-      document.getElementById("panel").style.display = "block";
+      document.getElementById("app").style.display = "block";
     } catch (e) {
       sessionStorage.removeItem("qx_admin_secret");
       document.getElementById("gateError").textContent = e.message;
@@ -256,8 +608,547 @@
 
   function logout() {
     sessionStorage.removeItem("qx_admin_secret");
-    document.getElementById("panel").style.display = "none";
+    document.getElementById("app").style.display = "none";
     document.getElementById("gate").style.display = "block";
+  }
+
+  // ---------------- Tabs ----------------
+  const tabLoaders = {
+    dashboard: loadDashboard,
+    users: () => searchUsers(1),
+    licenses: loadLicensesTab,
+    referrals: () => loadReferrals(1),
+    affiliates: loadAffiliatesTab,
+    settings: loadSettings,
+    health: loadHealth,
+    logs: loadLogs,
+  };
+
+  function showTab(name) {
+    document.querySelectorAll(".navbtn[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+    document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+    document.getElementById("tab-" + name).classList.add("active");
+    if (tabLoaders[name]) tabLoaders[name]();
+  }
+
+  // ---------------- Dashboard ----------------
+  async function loadDashboard() {
+    const d = await api("/admin/dashboard/stats");
+    document.getElementById("statTotalUsers").textContent = d.total_users;
+    document.getElementById("statActiveUsers").textContent = d.active_users;
+    document.getElementById("statPremiumUsers").textContent = d.premium_users;
+    document.getElementById("statRevenue").textContent = fmtMoney(d.revenue_usd_total);
+    document.getElementById("statRevenue30d").textContent = fmtMoney(d.revenue_usd_last_30d);
+    document.getElementById("statSignupsToday").textContent = d.signups_today;
+    document.getElementById("statSignups7d").textContent = d.signups_last_7d;
+    document.getElementById("statReferrals").textContent = d.total_referrals;
+    document.getElementById("statPendingPayments").textContent = d.pending_payment_requests;
+
+    const days = Object.keys(d.signups_by_day_last_14d).sort();
+    const maxVal = Math.max(1, ...Object.values(d.signups_by_day_last_14d));
+    document.getElementById("signupSparkline").innerHTML = days.length
+      ? days.map(day => {
+          const v = d.signups_by_day_last_14d[day];
+          const pct = Math.round((v / maxVal) * 100);
+          return `<div class="bar" style="height:${Math.max(pct,4)}%" title="${day}: ${v}"></div>`;
+        }).join("")
+      : `<span class="sub">No signups in the last 14 days.</span>`;
+
+    const plans = Object.entries(d.plan_breakdown);
+    document.getElementById("planBreakdown").innerHTML = plans.length
+      ? plans.map(([p, c]) => `<span class="pill pill-${p}" style="margin-right:8px">${p}: ${c}</span>`).join("")
+      : "No users yet.";
+    return d;
+  }
+
+  // ---------------- Users ----------------
+  let userPage = 1;
+  function changeUserPage(delta) {
+    userPage = Math.max(1, userPage + delta);
+    searchUsers(userPage);
+  }
+  async function searchUsers(page) {
+    userPage = page || 1;
+    document.getElementById("usersError").textContent = "";
+    try {
+      const q = document.getElementById("userSearchInput").value.trim();
+      const status = document.getElementById("userStatusFilter").value;
+      const plan = document.getElementById("userPlanFilter").value;
+      const params = new URLSearchParams({ q, status, plan, page: userPage, page_size: 25 });
+      const data = await api(`/admin/users?${params.toString()}`);
+      document.getElementById("usersBody").innerHTML = data.users.map(u => `
+        <tr>
+          <td>${u.id}</td>
+          <td>${esc(u.email)}</td>
+          <td>${u.full_name ? esc(u.full_name) : "<em>—</em>"}</td>
+          <td class="${u.is_active ? 'pill-active' : 'pill-banned'}">${u.is_active ? "Active" : "Banned"}</td>
+          <td><span class="pill pill-${esc(u.plan)}">${esc(u.plan)}</span></td>
+          <td>${fmtDate(u.plan_renews_at)}</td>
+          <td>${fmtDate(u.created_at)}</td>
+          <td class="actions">
+            <button class="secondary" onclick="openUserModal(${u.id})">View</button>
+            ${u.is_active
+              ? `<button class="danger" onclick="banUser(${u.id})">Ban</button>`
+              : `<button class="success" onclick="unbanUser(${u.id})">Unban</button>`}
+            <button class="secondary" onclick="promptActivateSubscription(${u.id})">Activate plan</button>
+          </td>
+        </tr>`).join("") || `<tr><td colspan="8">No users found.</td></tr>`;
+      document.getElementById("usersPageInfo").textContent =
+        `Page ${data.page} — ${data.total} user${data.total === 1 ? "" : "s"} total`;
+    } catch (e) {
+      document.getElementById("usersError").textContent = e.message;
+    }
+  }
+
+  async function openUserModal(id) {
+    document.getElementById("userModalOverlay").classList.add("open");
+    const body = document.getElementById("userModalBody");
+    body.innerHTML = "loading...";
+    try {
+      const d = await api(`/admin/users/${id}`);
+      const u = d.user;
+      body.innerHTML = `
+        <div class="kv"><b>Email:</b> ${esc(u.email)}</div>
+        <div class="kv"><b>Name:</b> ${u.full_name ? esc(u.full_name) : "—"}</div>
+        <div class="kv"><b>Status:</b> ${u.is_active ? "Active" : "Banned"}</div>
+        <div class="kv"><b>Plan:</b> ${esc(u.plan)} (${esc(u.plan_status)}), renews ${fmtDate(u.plan_renews_at)}</div>
+        <div class="kv"><b>Role:</b> ${esc(u.role)}</div>
+        <div class="kv"><b>Reward points:</b> ${u.reward_points}</div>
+        <div class="kv"><b>Joined:</b> ${fmtDate(u.created_at)}</div>
+        <h3 style="margin:16px 0 6px">Billing events</h3>
+        <table><thead><tr><th>Type</th><th>Plan</th><th>Amount</th><th>Date</th></tr></thead>
+          <tbody>${d.billing_events.map(b => `<tr><td>${esc(b.event_type)}</td><td>${esc(b.plan)||"—"}</td><td>${b.amount_cents!=null?fmtMoney(b.amount_cents/100):"—"}</td><td>${fmtDate(b.created_at)}</td></tr>`).join("") || '<tr><td colspan="4">None</td></tr>'}</tbody></table>
+        <h3 style="margin:16px 0 6px">Referrals made</h3>
+        <table><thead><tr><th>Referred email</th><th>Rewarded</th><th>Date</th></tr></thead>
+          <tbody>${d.referrals_made.map(r => `<tr><td>${esc(r.referred_email)}</td><td>${r.rewarded?"yes":"no"}</td><td>${fmtDate(r.created_at)}</td></tr>`).join("") || '<tr><td colspan="3">None</td></tr>'}</tbody></table>
+        <h3 style="margin:16px 0 6px">Recent notifications</h3>
+        <table><thead><tr><th>Title</th><th>Category</th><th>Date</th></tr></thead>
+          <tbody>${d.notifications.map(n => `<tr><td>${esc(n.title)}</td><td>${esc(n.category)}</td><td>${fmtDate(n.created_at)}</td></tr>`).join("") || '<tr><td colspan="3">None</td></tr>'}</tbody></table>
+      `;
+    } catch (e) {
+      body.innerHTML = `<div class="error">${esc(e.message)}</div>`;
+    }
+  }
+  function closeUserModal() { document.getElementById("userModalOverlay").classList.remove("open"); }
+
+  async function banUser(id) {
+    const reason = prompt("Reason for ban (optional, shown to the user):", "");
+    if (reason === null) return;
+    try {
+      await api(`/admin/users/${id}/ban`, { method: "POST", body: JSON.stringify({ reason: reason || "" }) });
+      await searchUsers(userPage);
+    } catch (e) { alert(e.message); }
+  }
+  async function unbanUser(id) {
+    try {
+      await api(`/admin/users/${id}/unban`, { method: "POST" });
+      await searchUsers(userPage);
+    } catch (e) { alert(e.message); }
+  }
+  async function promptActivateSubscription(id) {
+    const plan = prompt("Activate which plan? (premium / pro)", "premium");
+    if (!plan) return;
+    const daysStr = prompt("For how many days? (0 = never expires)", "30");
+    if (daysStr === null) return;
+    const days = parseInt(daysStr, 10);
+    if (!Number.isFinite(days) || days < 0) { alert("Enter a non-negative number of days."); return; }
+    try {
+      const data = await api(`/admin/users/${id}/activate-subscription`, {
+        method: "POST", body: JSON.stringify({ plan: plan.trim().toLowerCase(), days })
+      });
+      alert(`${data.plan} activated. Renews: ${data.renews_at ? new Date(data.renews_at).toLocaleString() : "never"}`);
+      await searchUsers(userPage);
+    } catch (e) { alert(e.message); }
+  }
+
+  // ---------------- Referrals ----------------
+  let referralPage = 1;
+  function changeReferralPage(delta) {
+    referralPage = Math.max(1, referralPage + delta);
+    loadReferrals(referralPage);
+  }
+  async function loadReferrals(page) {
+    referralPage = page || 1;
+    const q = document.getElementById("referralSearchInput").value.trim();
+    const params = new URLSearchParams({ q, page: referralPage, page_size: 25 });
+    const data = await api(`/admin/referrals?${params.toString()}`);
+    document.getElementById("topReferrersBody").innerHTML = data.top_referrers.map(r => `
+      <tr><td>${esc(r.email)}</td><td>${r.successful_referrals}</td></tr>`).join("") ||
+      `<tr><td colspan="2">No successful referrals yet.</td></tr>`;
+    document.getElementById("referralsBody").innerHTML = data.referrals.map(r => `
+      <tr>
+        <td>${esc(r.referrer_email)}</td>
+        <td>${esc(r.referred_email)}</td>
+        <td style="font-family:monospace">${esc(r.code_used)}</td>
+        <td>${r.rewarded ? "yes" : "pending"}</td>
+        <td>${fmtDate(r.created_at)}</td>
+      </tr>`).join("") || `<tr><td colspan="5">No referrals found.</td></tr>`;
+    document.getElementById("referralsPageInfo").textContent =
+      `Page ${data.page} — ${data.total} referral${data.total === 1 ? "" : "s"} total`;
+  }
+
+  // ---------------- Affiliate program ----------------
+  let commissionPage = 1, withdrawalPage = 1;
+
+  async function loadAffiliatesTab() {
+    await Promise.all([
+      loadAffiliateSettings(),
+      loadAffiliateStats(),
+      loadTopAffiliates(),
+      loadAllAffiliates(),
+      loadCommissions(1),
+      loadWithdrawals(1),
+    ]);
+  }
+
+  async function loadAffiliateSettings() {
+    const s = await api("/admin/affiliates/settings");
+    document.getElementById("affEnabled").checked = !!s.enabled;
+    document.getElementById("affCommissionAmount").value = s.commission_amount_usd;
+    document.getElementById("affMinWithdrawal").value = s.min_withdrawal_usd;
+  }
+
+  async function saveAffiliateSettings() {
+    const msgEl = document.getElementById("affSettingsMsg");
+    msgEl.textContent = "Saving...";
+    try {
+      const data = await api("/admin/affiliates/settings", {
+        method: "POST",
+        body: JSON.stringify({
+          enabled: document.getElementById("affEnabled").checked,
+          commission_amount_usd: parseFloat(document.getElementById("affCommissionAmount").value),
+          min_withdrawal_usd: parseFloat(document.getElementById("affMinWithdrawal").value),
+        }),
+      });
+      msgEl.textContent = `Saved. Commission is now $${data.settings.commission_amount_usd} per subscription.`;
+    } catch (e) {
+      msgEl.textContent = e.message;
+    }
+  }
+
+  async function loadAffiliateStats() {
+    const s = await api("/admin/affiliates/stats");
+    const byStatus = s.commissions_by_status || {};
+    const pending = byStatus.pending || { count: 0, amount_usd: 0 };
+    const approved = byStatus.approved || { count: 0, amount_usd: 0 };
+    document.getElementById("affStatsGrid").innerHTML = `
+      <div class="stat-card"><div class="label">Total affiliates</div><div class="value">${s.total_affiliates}</div></div>
+      <div class="stat-card"><div class="label">Total clicks</div><div class="value">${s.total_clicks}</div></div>
+      <div class="stat-card"><div class="label">Registrations</div><div class="value">${s.total_registrations}</div></div>
+      <div class="stat-card"><div class="label">Paid conversions</div><div class="value green">${s.total_paid_conversions}</div></div>
+      <div class="stat-card"><div class="label">Conversion rate</div><div class="value">${s.conversion_rate === null ? "—" : (s.conversion_rate * 100).toFixed(1) + "%"}</div></div>
+      <div class="stat-card"><div class="label">Pending commission</div><div class="value amber">${pending.count} / ${fmtMoney(pending.amount_usd)}</div></div>
+      <div class="stat-card"><div class="label">Approved commission</div><div class="value">${approved.count} / ${fmtMoney(approved.amount_usd)}</div></div>
+      <div class="stat-card"><div class="label">Pending payouts</div><div class="value amber">${s.pending_payouts.count} / ${fmtMoney(s.pending_payouts.amount_usd)}</div></div>
+      <div class="stat-card"><div class="label">Completed payouts</div><div class="value green">${s.completed_payouts.count} / ${fmtMoney(s.completed_payouts.amount_usd)}</div></div>
+    `;
+  }
+
+  async function loadTopAffiliates() {
+    const data = await api("/admin/affiliates/top?limit=10");
+    document.getElementById("topAffiliatesBody").innerHTML = data.top_affiliates.map(a => `
+      <tr><td>${esc(a.email)}</td><td>${a.paid_subscriptions}</td><td>${fmtMoney(a.total_earnings_usd)}</td></tr>
+    `).join("") || `<tr><td colspan="3">No paid conversions yet.</td></tr>`;
+  }
+
+  async function loadAllAffiliates() {
+    const data = await api("/admin/affiliates?page=1&page_size=25");
+    document.getElementById("affiliatesBody").innerHTML = data.affiliates.map(a => `
+      <tr>
+        <td>${esc(a.email)}</td>
+        <td style="font-family:monospace">${esc(a.referral_code) || "—"}</td>
+        <td>${a.clicks}</td>
+        <td>${a.registrations}</td>
+        <td>${a.paid_subscriptions}</td>
+        <td>${fmtMoney(a.pending_commission_usd)}</td>
+        <td>${fmtMoney(a.approved_commission_usd)}</td>
+        <td>${fmtMoney(a.paid_commission_usd)}</td>
+      </tr>
+    `).join("") || `<tr><td colspan="8">No affiliates yet.</td></tr>`;
+  }
+
+  function changeCommissionPage(delta) {
+    commissionPage = Math.max(1, commissionPage + delta);
+    loadCommissions(commissionPage);
+  }
+  async function loadCommissions(page) {
+    commissionPage = page || 1;
+    const status = document.getElementById("commissionStatusFilter").value;
+    const params = new URLSearchParams({ status, page: commissionPage, page_size: 25 });
+    const data = await api(`/admin/affiliates/commissions?${params.toString()}`);
+    document.getElementById("commissionsBody").innerHTML = data.commissions.map(c => `
+      <tr>
+        <td>${esc(c.referrer_email)}</td>
+        <td>${esc(c.referred_email)}</td>
+        <td>${esc(c.plan_id)}</td>
+        <td>${fmtMoney(c.amount_cents / 100)}</td>
+        <td><span class="pill pill-${esc(c.status)}">${esc(c.status)}</span></td>
+        <td>${fmtDate(c.created_at)}</td>
+        <td>${c.status === "pending" ? `
+          <button class="secondary" style="width:auto;padding:6px 10px" onclick="reviewCommission(${c.id}, true)">Approve</button>
+          <button class="secondary" style="width:auto;padding:6px 10px" onclick="reviewCommission(${c.id}, false)">Reject</button>
+        ` : "—"}</td>
+      </tr>
+    `).join("") || `<tr><td colspan="7">No commissions found.</td></tr>`;
+    document.getElementById("commissionsPageInfo").textContent =
+      `Page ${data.page} — ${data.total} commission${data.total === 1 ? "" : "s"} total`;
+  }
+
+  async function reviewCommission(id, approve) {
+    const note = approve ? "" : (prompt("Reason for rejecting this commission?") || "");
+    if (!approve && note === null) return;
+    try {
+      await api(`/admin/affiliates/commissions/${id}/${approve ? "approve" : "reject"}`, {
+        method: "POST", body: JSON.stringify({ note }),
+      });
+      await loadCommissions(commissionPage);
+      await loadAffiliateStats();
+    } catch (e) { alert(e.message); }
+  }
+
+  function changeWithdrawalPage(delta) {
+    withdrawalPage = Math.max(1, withdrawalPage + delta);
+    loadWithdrawals(withdrawalPage);
+  }
+  async function loadWithdrawals(page) {
+    withdrawalPage = page || 1;
+    const status = document.getElementById("withdrawalStatusFilter").value;
+    const params = new URLSearchParams({ status, page: withdrawalPage, page_size: 25 });
+    const data = await api(`/admin/affiliates/withdrawals?${params.toString()}`);
+    document.getElementById("withdrawalsBody").innerHTML = data.withdrawals.map(w => `
+      <tr>
+        <td>${esc(w.affiliate_email)}</td>
+        <td>${fmtMoney(w.amount_cents / 100)}</td>
+        <td>${esc(w.method)}</td>
+        <td>${esc(w.destination)}</td>
+        <td><span class="pill pill-${esc(w.status)}">${esc(w.status)}</span></td>
+        <td>${fmtDate(w.requested_at)}</td>
+        <td>${w.status === "pending" ? `
+          <button class="secondary" style="width:auto;padding:6px 10px" onclick="reviewWithdrawal(${w.id}, true)">Approve</button>
+          <button class="secondary" style="width:auto;padding:6px 10px" onclick="reviewWithdrawal(${w.id}, false)">Reject</button>
+        ` : w.status === "approved" ? `
+          <button class="secondary" style="width:auto;padding:6px 10px" onclick="markWithdrawalPaid(${w.id})">Mark paid</button>
+        ` : "—"}</td>
+      </tr>
+    `).join("") || `<tr><td colspan="7">No withdrawal requests found.</td></tr>`;
+    document.getElementById("withdrawalsPageInfo").textContent =
+      `Page ${data.page} — ${data.total} withdrawal${data.total === 1 ? "" : "s"} total`;
+  }
+
+  async function reviewWithdrawal(id, approve) {
+    const note = approve ? "" : (prompt("Reason for rejecting this withdrawal?") || "");
+    if (!approve && note === null) return;
+    try {
+      await api(`/admin/affiliates/withdrawals/${id}/${approve ? "approve" : "reject"}`, {
+        method: "POST", body: JSON.stringify({ note }),
+      });
+      await loadWithdrawals(withdrawalPage);
+      await loadAffiliateStats();
+    } catch (e) { alert(e.message); }
+  }
+
+  async function markWithdrawalPaid(id) {
+    if (!confirm("Confirm you've actually sent this payout? This marks it (and its underlying commissions) as paid.")) return;
+    try {
+      await api(`/admin/affiliates/withdrawals/${id}/mark-paid`, { method: "POST" });
+      await loadWithdrawals(withdrawalPage);
+      await loadAffiliateStats();
+    } catch (e) { alert(e.message); }
+  }
+
+  // ---------------- Broadcast / notifications ----------------
+  async function sendBroadcast() {
+    document.getElementById("broadcastError").textContent = "";
+    document.getElementById("broadcastSuccess").textContent = "";
+    const title = document.getElementById("broadcastTitle").value.trim();
+    const body = document.getElementById("broadcastBody").value.trim();
+    const audience = document.getElementById("broadcastAudience").value;
+    const category = document.getElementById("broadcastCategory").value;
+    if (!title) { document.getElementById("broadcastError").textContent = "Title is required."; return; }
+    try {
+      const data = await api("/admin/broadcast", { method: "POST", body: JSON.stringify({ title, body, audience, category }) });
+      document.getElementById("broadcastSuccess").textContent = `Sent to ${data.recipients} user(s).`;
+      document.getElementById("broadcastTitle").value = "";
+      document.getElementById("broadcastBody").value = "";
+    } catch (e) {
+      document.getElementById("broadcastError").textContent = e.message;
+    }
+  }
+
+  async function sendSingleNotification() {
+    document.getElementById("notifError").textContent = "";
+    document.getElementById("notifSuccess").textContent = "";
+    const target = document.getElementById("notifTarget").value.trim();
+    const title = document.getElementById("notifTitle").value.trim();
+    const body = document.getElementById("notifBody").value.trim();
+    const category = document.getElementById("notifCategory").value;
+    if (!target || !title) { document.getElementById("notifError").textContent = "Target and title are required."; return; }
+    const payload = { title, body, category };
+    if (/^\d+$/.test(target)) payload.user_id = parseInt(target, 10);
+    else payload.email = target;
+    try {
+      await api("/admin/notifications/send", { method: "POST", body: JSON.stringify(payload) });
+      document.getElementById("notifSuccess").textContent = "Notification sent.";
+      document.getElementById("notifTarget").value = "";
+      document.getElementById("notifTitle").value = "";
+      document.getElementById("notifBody").value = "";
+    } catch (e) {
+      document.getElementById("notifError").textContent = e.message;
+    }
+  }
+
+  // ---------------- Settings ----------------
+  async function loadSettings() {
+    const d = await api("/admin/system/settings");
+    document.getElementById("settingProvider").textContent = d.market_data_provider;
+    document.getElementById("settingTurso").textContent = d.turso_enabled ? "enabled" : "disabled (local SQLite only)";
+    document.getElementById("settingAssets").textContent = d.tracked_assets.join(", ") || "—";
+    document.getElementById("settingRooms").textContent = d.rooms.join(", ") || "—";
+    document.getElementById("settingPlans").textContent = d.plans.join(", ") || "—";
+    document.getElementById("currentKeyMasked").textContent = d.market_data_api_key_masked;
+    document.getElementById("siteNoticeInput").value = d.site_notice || "";
+    await loadPaymentSettings();
+  }
+
+  async function updateSiteNotice() {
+    const successEl = document.getElementById("siteNoticeSuccess");
+    successEl.textContent = "";
+    const message = document.getElementById("siteNoticeInput").value.trim();
+    try {
+      await api("/admin/system/settings/site-notice", { method: "POST", body: JSON.stringify({ message }) });
+      successEl.textContent = message ? "Notice is now live on the app." : "Notice cleared.";
+    } catch (e) { alert(e.message); }
+  }
+
+  async function updateApiKey() {
+    document.getElementById("apiKeyError").textContent = "";
+    document.getElementById("apiKeySuccess").textContent = "";
+    const newKey = document.getElementById("newApiKey").value.trim();
+    if (!newKey) return;
+    try {
+      const data = await api("/admin/config/market-data-key", { method: "POST", body: JSON.stringify({ api_key: newKey }) });
+      document.getElementById("currentKeyMasked").textContent = data.masked_key;
+      document.getElementById("apiKeySuccess").textContent = "Updated — the live feed will use this on its next request, no restart needed.";
+      document.getElementById("newApiKey").value = "";
+    } catch (e) {
+      document.getElementById("apiKeyError").textContent = e.message;
+    }
+  }
+
+  // ---------------- Payment settings ----------------
+  const PS_FIELD_MAP = {
+    psJazzcashNumber: "jazzcash_number",
+    psJazzcashTitle: "jazzcash_account_title",
+    psEasypaisaNumber: "easypaisa_number",
+    psEasypaisaTitle: "easypaisa_account_title",
+    psBankName: "bank_name",
+    psBankTitle: "bank_account_title",
+    psBankNumber: "bank_account_number",
+    psBankBranch: "bank_branch",
+    psInstructions: "instructions",
+    psSupportContact: "support_contact",
+    psTelegramLink: "telegram_link",
+  };
+
+  async function loadPaymentSettings() {
+    try {
+      const d = await api("/admin/config/payment-settings");
+      for (const [elId, key] of Object.entries(PS_FIELD_MAP)) {
+        document.getElementById(elId).value = d[key] || "";
+      }
+    } catch (e) {
+      document.getElementById("paymentSettingsError").textContent = e.message;
+    }
+  }
+
+  async function updatePaymentSettings() {
+    document.getElementById("paymentSettingsError").textContent = "";
+    document.getElementById("paymentSettingsSuccess").textContent = "";
+    const payload = {};
+    for (const [elId, key] of Object.entries(PS_FIELD_MAP)) {
+      payload[key] = document.getElementById(elId).value.trim();
+    }
+    try {
+      await api("/admin/config/payment-settings", { method: "POST", body: JSON.stringify(payload) });
+      document.getElementById("paymentSettingsSuccess").textContent = "Saved — live on the subscription page immediately.";
+    } catch (e) {
+      document.getElementById("paymentSettingsError").textContent = e.message;
+    }
+  }
+
+  async function processRenewals() {
+    const resultEl = document.getElementById("renewalsResult");
+    resultEl.textContent = "Running…";
+    try {
+      const d = await api("/admin/subscriptions/process-renewals", { method: "POST", body: "{}" });
+      resultEl.textContent = `Checked ${d.checked} subscription(s) — ${d.expired} expired, ${d.reminded} reminder(s) sent.`;
+    } catch (e) {
+      resultEl.textContent = "";
+      alert(e.message);
+    }
+  }
+
+  async function cleanupPaymentHistory() {
+    const resultEl = document.getElementById("cleanupResult");
+    const days = parseInt(document.getElementById("cleanupDays").value, 10) || 90;
+    resultEl.textContent = "Cleaning up…";
+    try {
+      const d = await api("/admin/payment-requests/cleanup", { method: "POST", body: JSON.stringify({ older_than_days: days }) });
+      resultEl.textContent = `Removed ${d.removed} resolved request(s) older than ${days} days.`;
+    } catch (e) {
+      resultEl.textContent = "";
+      alert(e.message);
+    }
+  }
+
+  // ---------------- Health ----------------
+  async function loadHealth() {
+    const d = await api("/admin/system/health");
+    const statusEl = document.getElementById("healthStatus");
+    statusEl.textContent = d.status;
+    statusEl.style.color = d.status === "ok" ? "var(--green)" : "var(--amber)";
+    document.getElementById("healthUptime").textContent = d.uptime_seconds != null ? `${Math.round(d.uptime_seconds)}s` : "—";
+    document.getElementById("healthLicenseDb").innerHTML = d.license_db_reachable
+      ? '<span class="dot ok"></span>reachable' : '<span class="dot bad"></span>unreachable';
+    document.getElementById("healthTurso").textContent = d.turso_enabled ? "enabled" : "disabled (local SQLite only)";
+
+    document.getElementById("healthAssets").innerHTML = Object.entries(d.assets).map(([asset, ok]) => `
+      <div class="health-chip"><span class="dot ${ok ? 'ok' : 'bad'}"></span>${asset}</div>`).join("") ||
+      `<span class="sub">No tracked assets.</span>`;
+
+    document.getElementById("healthWsRunning").innerHTML = d.websocket.running
+      ? '<span class="dot ok"></span>yes' : '<span class="dot bad"></span>no';
+    document.getElementById("healthWsTotal").textContent = d.websocket.total_connections;
+    document.getElementById("healthRooms").innerHTML = Object.entries(d.websocket.rooms).map(([room, count]) => `
+      <div class="health-chip">${room}: <b>${count}</b> connected</div>`).join("") ||
+      `<span class="sub">No rooms configured.</span>`;
+  }
+
+  // ---------------- Error logs ----------------
+  async function loadLogs() {
+    const level = document.getElementById("logLevelFilter").value;
+    const params = new URLSearchParams(level ? { level } : {});
+    const d = await api(`/admin/system/error-logs?${params.toString()}`);
+    document.getElementById("logsBody").innerHTML = d.logs.map(l => `
+      <tr class="log-row ${esc(l.level)}">
+        <td>${fmtDate(l.timestamp)}</td>
+        <td>${esc(l.level)}</td>
+        <td>${esc(l.logger)}</td>
+        <td>${esc(l.message)}${l.exception ? `<br><span class="sub" style="white-space:pre-wrap">${esc(l.exception)}</span>` : ""}</td>
+      </tr>`).join("") || `<tr><td colspan="4">No log entries yet.</td></tr>`;
+  }
+  async function clearLogs() {
+    if (!confirm("Clear the in-memory error log? This can't be undone.")) return;
+    await api("/admin/system/error-logs/clear", { method: "POST" });
+    await loadLogs();
+  }
+
+  // ---------------- Licenses tab (existing key/payment management) ----------------
+  function loadLicensesTab() {
+    loadKeys().catch(() => {});
+    loadKeyRegistry();
+    loadPaymentRequests();
+    loadPaddleOrders();
   }
 
   async function loadPaddleOrders() {
@@ -265,28 +1156,22 @@
       const data = await api("/admin/paddle-orders");
       const rows = data.orders.map(o => `
         <tr>
-          <td>${o.email}</td>
-          <td>${o.plan_days} days${o.event_kind === "renewed" ? " (renewal)" : ""}</td>
-          <td style="font-family:monospace">${o.license_key}</td>
+          <td>${esc(o.email)}</td>
+          <td>${o.plan_days} days</td>
+          <td style="font-family:monospace">${esc(o.license_key)}</td>
           <td>${o.delivered ? "yes" : `no — send it! <button class="secondary" style="padding:4px 8px;font-size:11px;margin-left:6px" onclick="markPaddleDelivered('${o.id}')">Mark delivered</button>`}</td>
         </tr>`).join("");
-      document.getElementById("paddleOrdersBody").innerHTML =
-        rows || `<tr><td colspan="4">No orders yet.</td></tr>`;
+      document.getElementById("paddleOrdersBody").innerHTML = rows || `<tr><td colspan="4">No orders yet.</td></tr>`;
     } catch (e) {
-      document.getElementById("paddleOrdersBody").innerHTML =
-        `<tr><td colspan="4">Not available yet</td></tr>`;
+      document.getElementById("paddleOrdersBody").innerHTML = `<tr><td colspan="4">Not available yet</td></tr>`;
     }
   }
 
   async function markPaddleDelivered(orderId) {
     try {
-      await api("/admin/paddle-orders/mark-delivered", {
-        method: "POST", body: JSON.stringify({ request_id: orderId })
-      });
+      await api("/admin/paddle-orders/mark-delivered", { method: "POST", body: JSON.stringify({ request_id: orderId }) });
       await loadPaddleOrders();
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   }
 
   async function loadPaymentRequests() {
@@ -296,18 +1181,18 @@
       const pending = data.requests.filter(r => r.status === "pending");
       const rows = pending.map(r => `
         <tr>
-          <td>${r.name}</td>
-          <td>${r.contact}${r.email ? `<br><span style="opacity:0.7;font-size:11px">${r.email}</span>` : ""}</td>
-          <td>${r.plan_id || "premium"}</td>
-          <td>${r.transaction_note || "<em>(none)</em>"}</td>
+          <td>${esc(r.name)}${r.email ? `<br><span style="font-size:11px;color:var(--muted)">${esc(r.email)}</span>` : ""}</td>
+          <td>${esc(r.contact)}</td>
+          <td>${esc((r.plan_id || "?").charAt(0).toUpperCase() + (r.plan_id || "?").slice(1))} — ${r.duration_days} days</td>
+          <td>${r.transaction_note ? esc(r.transaction_note) : "<em>(none)</em>"}</td>
           <td>${r.voucher_filename ? `<button class="secondary" style="padding:4px 8px;font-size:11px" onclick="viewVoucher('${r.voucher_filename}')">View</button>` : "<em>none</em>"}</td>
           <td class="actions">
             <button onclick="approveRequest('${r.id}')">Approve &amp; generate key</button>
+            <button class="secondary" onclick="rejectRequest('${r.id}')">Reject</button>
             <button class="secondary" onclick="dismissRequest('${r.id}')">Dismiss</button>
           </td>
         </tr>`).join("");
-      document.getElementById("paymentRequestsBody").innerHTML =
-        rows || `<tr><td colspan="6">No pending requests.</td></tr>`;
+      document.getElementById("paymentRequestsBody").innerHTML = rows || `<tr><td colspan="6">No pending requests.</td></tr>`;
     } catch (e) {
       document.getElementById("paymentRequestsError").textContent = e.message;
     }
@@ -316,101 +1201,51 @@
   async function viewVoucher(filename) {
     try {
       const secret = getSecret();
-      const res = await fetch(`${BACKEND}/admin/payment-requests/voucher/${filename}`, {
-        headers: { "X-Admin-Secret": secret || "" },
-      });
+      const res = await fetch(`${BACKEND}/admin/payment-requests/voucher/${filename}`, { headers: { "X-Admin-Secret": secret || "" } });
       if (!res.ok) throw new Error("Could not load voucher image.");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   }
 
   async function approveRequest(id) {
     try {
-      const data = await api("/admin/payment-requests/approve", {
-        method: "POST", body: JSON.stringify({ request_id: id })
-      });
-      alert(`Key generated: ${data.key}\n\nCopy this now and send it to: ${data.deliver_to}\n(This is shown once — it won't be retrievable again.)`);
+      const data = await api("/admin/payment-requests/approve", { method: "POST", body: JSON.stringify({ request_id: id }) });
+      const activationNote = data.account_activated
+        ? "\n\nTheir linked account's subscription was activated automatically."
+        : "";
+      alert(`Key generated: ${data.key}\n\nCopy this now and send it to: ${data.deliver_to}\n(This is shown once — it won't be retrievable again.)${activationNote}`);
       await loadPaymentRequests();
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
+  }
+
+  async function rejectRequest(id) {
+    const reason = prompt("Reason for rejecting this payment request (shown to you later, not automatically sent to the customer):");
+    if (reason === null) return;
+    try {
+      await api("/admin/payment-requests/reject", { method: "POST", body: JSON.stringify({ request_id: id, note: reason }) });
+      await loadPaymentRequests();
+    } catch (e) { alert(e.message); }
   }
 
   async function dismissRequest(id) {
     if (!confirm("Dismiss this request without generating a key?")) return;
     try {
-      await api("/admin/payment-requests/dismiss", {
-        method: "POST", body: JSON.stringify({ request_id: id })
-      });
+      await api("/admin/payment-requests/dismiss", { method: "POST", body: JSON.stringify({ request_id: id }) });
       await loadPaymentRequests();
-    } catch (e) {
-      alert(e.message);
-    }
-  }
-
-  async function loadSiteNotice() {
-    try {
-      const data = await api("/admin/config/site-notice");
-      document.getElementById("siteNoticeInput").value = data.message || "";
-    } catch (e) { /* non-critical */ }
-  }
-
-  async function updateSiteNotice() {
-    const successEl = document.getElementById("siteNoticeSuccess");
-    successEl.textContent = "";
-    const message = document.getElementById("siteNoticeInput").value.trim();
-    try {
-      await api("/admin/config/site-notice", {
-        method: "POST", body: JSON.stringify({ message })
-      });
-      successEl.textContent = message ? "Notice is now live on the app." : "Notice cleared.";
-    } catch (e) {
-      alert(e.message);
-    }
-  }
-
-  async function loadApiKeyStatus() {
-    try {
-      const data = await api("/admin/config/market-data-key");
-      document.getElementById("currentKeyMasked").textContent = data.masked_key;
-    } catch (e) {
-      document.getElementById("currentKeyMasked").textContent = "error loading";
-    }
-  }
-
-  async function updateApiKey() {
-    document.getElementById("apiKeyError").textContent = "";
-    document.getElementById("apiKeySuccess").textContent = "";
-    const newKey = document.getElementById("newApiKey").value.trim();
-    if (!newKey) return;
-    try {
-      const data = await api("/admin/config/market-data-key", {
-        method: "POST", body: JSON.stringify({ api_key: newKey })
-      });
-      document.getElementById("currentKeyMasked").textContent = data.masked_key;
-      document.getElementById("apiKeySuccess").textContent =
-        "Updated — the live feed will use this on its next request, no restart needed.";
-      document.getElementById("newApiKey").value = "";
-    } catch (e) {
-      document.getElementById("apiKeyError").textContent = e.message;
-    }
+    } catch (e) { alert(e.message); }
   }
 
   async function loadKeys(searchQuery) {
     document.getElementById("listError").textContent = "";
     try {
-      const endpoint = searchQuery
-        ? `/admin/keys/search?q=${encodeURIComponent(searchQuery)}`
-        : "/admin/keys";
+      const endpoint = searchQuery ? `/admin/keys/search?q=${encodeURIComponent(searchQuery)}` : "/admin/keys";
       const data = await api(endpoint);
       const rows = data.keys.map(k => `
         <tr>
           <td>${k.id}</td>
-          <td>${k.label || "<em>(none)</em>"}</td>
+          <td>${k.label ? esc(k.label) : "<em>(none)</em>"}</td>
           <td class="${k.revoked ? 'status-revoked' : 'status-active'}">${k.revoked ? 'REVOKED' : 'active'}</td>
           <td>${k.expires_at ? new Date(k.expires_at).toLocaleDateString() : 'never'}</td>
           <td>${k.max_concurrent_sessions}</td>
@@ -432,44 +1267,31 @@
     loadKeys(q || undefined);
   }
 
-  // No plaintext key needed anymore — act directly by the ID shown in
-  // the table (which you can find by name using the search box above it).
   async function revokeById(id) {
     if (!confirm(`Revoke license #${id}? This blocks access immediately.`)) return;
     try {
       await api("/admin/keys/revoke-by-id", { method: "POST", body: JSON.stringify({ license_id: id }) });
       await loadKeys(document.getElementById("keySearchInput").value.trim() || undefined);
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   }
 
   async function reactivateById(id) {
     try {
       await api("/admin/keys/reactivate-by-id", { method: "POST", body: JSON.stringify({ license_id: id }) });
       await loadKeys(document.getElementById("keySearchInput").value.trim() || undefined);
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   }
 
   async function extendById(id) {
     const daysStr = prompt("Extend by how many days?", "30");
     if (!daysStr) return;
     const additional_days = parseInt(daysStr, 10);
-    if (!Number.isFinite(additional_days) || additional_days <= 0) {
-      alert("Enter a positive number of days.");
-      return;
-    }
+    if (!Number.isFinite(additional_days) || additional_days <= 0) { alert("Enter a positive number of days."); return; }
     try {
-      const data = await api("/admin/keys/extend-by-id", {
-        method: "POST", body: JSON.stringify({ license_id: id, additional_days })
-      });
+      const data = await api("/admin/keys/extend-by-id", { method: "POST", body: JSON.stringify({ license_id: id, additional_days }) });
       alert(`New expiry: ${new Date(data.new_expiry).toLocaleString()}`);
       await loadKeys(document.getElementById("keySearchInput").value.trim() || undefined);
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   }
 
   async function loadKeyRegistry(query) {
@@ -478,16 +1300,13 @@
       const data = await api(`/admin/key-registry?q=${encodeURIComponent(q)}`);
       const rows = data.entries.map(e => `
         <tr>
-          <td>${e.name}</td>
-          <td style="font-family:monospace">${e.key}</td>
-          <td style="font-size:11px;color:var(--muted)">${e.source}</td>
+          <td>${esc(e.name)}</td>
+          <td style="font-family:monospace">${esc(e.key)}</td>
+          <td style="font-size:11px;color:var(--muted)">${esc(e.source)}</td>
           <td>${new Date(e.created_at * 1000).toLocaleDateString()}</td>
-          <td class="actions">
-            <button class="secondary" onclick="deleteRegistryEntry(${e.license_id})">Remove from list</button>
-          </td>
+          <td class="actions"><button class="secondary" onclick="deleteRegistryEntry(${e.license_id})">Remove from list</button></td>
         </tr>`).join("");
-      document.getElementById("keyRegistryBody").innerHTML =
-        rows || `<tr><td colspan="5">No saved keys yet.</td></tr>`;
+      document.getElementById("keyRegistryBody").innerHTML = rows || `<tr><td colspan="5">No saved keys yet.</td></tr>`;
     } catch (e) {
       document.getElementById("keyRegistryBody").innerHTML = `<tr><td colspan="5">Error loading.</td></tr>`;
     }
@@ -498,13 +1317,11 @@
   }
 
   async function deleteRegistryEntry(licenseId) {
-    if (!confirm("Remove this key from the saved list? (This does NOT revoke the license itself -- use Revoke in 'All keys' for that.)")) return;
+    if (!confirm("Remove this key from the saved list? (This does NOT revoke the license itself.)")) return;
     try {
       await api("/admin/key-registry/delete", { method: "POST", body: JSON.stringify({ license_id: licenseId }) });
       await loadKeyRegistry(document.getElementById("registrySearchInput").value.trim());
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   }
 
   async function generateKey() {
@@ -513,16 +1330,11 @@
     const label = document.getElementById("genLabel").value.trim();
     const days = parseInt(document.getElementById("genDays").value || "30", 10);
     const sessionsRaw = document.getElementById("genSessions").value.trim();
-    const body = {
-      label,
-      expires_in_days: days,
-      max_concurrent_sessions: sessionsRaw ? parseInt(sessionsRaw, 10) : null,
-    };
+    const body = { label, expires_in_days: days, max_concurrent_sessions: sessionsRaw ? parseInt(sessionsRaw, 10) : null };
     try {
       const data = await api("/admin/keys/generate", { method: "POST", body: JSON.stringify(body) });
       document.getElementById("newKeyBox").innerHTML =
-        `<div class="new-key">${data.key}<br><span style="font-family:-apple-system;font-size:12px;color:var(--muted)">
-         ${data.warning} Copy it before refreshing.</span></div>`;
+        `<div class="new-key">${data.key}<br><span style="font-family:-apple-system;font-size:12px;color:var(--muted)">${data.warning} Copy it before refreshing.</span></div>`;
       await loadKeys();
       await loadKeyRegistry();
     } catch (e) {
@@ -546,14 +1358,9 @@
 
   // Auto-login if a secret is already stored for this browser session.
   if (getSecret()) {
-    loadKeys().then(() => {
+    loadDashboard().then(() => {
       document.getElementById("gate").style.display = "none";
-      document.getElementById("panel").style.display = "block";
-      loadApiKeyStatus();
-      loadPaymentRequests();
-      loadPaddleOrders();
-      loadSiteNotice();
-      loadKeyRegistry();
+      document.getElementById("app").style.display = "block";
     }).catch(() => {});
   }
 </script>

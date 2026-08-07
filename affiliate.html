@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<link rel="icon" href="./icon-192.png">
+<title>Affiliate Dashboard — Quotex Signal Generator</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --border: #262b36; --text: #e8eaed;
+    --muted: #8b92a4; --accent: #4f8cff; --green: #35c46a; --red: #ff5a5a; --amber: #e3b23c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    max-width: 480px; margin: 0 auto; padding: 32px 20px 60px; min-height: 100vh;
+  }
+  h1 { font-size: 19px; margin: 8px 0 20px; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; }
+  select, input, textarea, button {
+    width: 100%; padding: 12px; font-size: 15px; box-sizing: border-box;
+    border-radius: 10px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text); font-family: inherit;
+  }
+  button.primary {
+    margin-top: 18px; background: var(--accent); border: none; color: #fff;
+    font-weight: 600; cursor: pointer; padding: 14px;
+  }
+  button.primary:disabled { background: #33384a; color: var(--muted); }
+  button.secondary {
+    margin-top: 10px; background: transparent; border: 1px solid var(--border);
+    color: var(--text); cursor: pointer; padding: 12px;
+  }
+  button.link {
+    background: none; border: none; color: var(--accent); font-size: 13px;
+    padding: 8px 0; cursor: pointer; text-decoration: underline; width: auto;
+  }
+  .card {
+    background: rgba(23, 26, 33, 0.6); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 18px; margin-bottom: 16px;
+  }
+  .hidden { display: none !important; }
+  .error { color: var(--red); font-size: 13px; margin-top: 8px; min-height: 1em; }
+  .success { color: var(--green); font-size: 13px; margin-top: 8px; min-height: 1em; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+  .stat-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px; text-align: center;
+  }
+  .stat-box .value { font-size: 20px; font-weight: 700; }
+  .stat-box .label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .link-row { display: flex; gap: 8px; align-items: center; }
+  .link-row input { flex: 1; font-size: 13px; }
+  .link-row button { width: auto; padding: 12px 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge.pending { background: rgba(227,178,60,0.15); color: var(--amber); }
+  .badge.approved { background: rgba(79,140,255,0.15); color: var(--accent); }
+  .badge.paid { background: rgba(53,196,106,0.15); color: var(--green); }
+  .badge.rejected, .badge.dismissed { background: rgba(255,90,90,0.15); color: var(--red); }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tabs button { width: auto; flex: 1; padding: 10px; }
+  .tabs button.active { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>Affiliate Dashboard</h1>
+<div class="sub"><a href="./index.html" style="color:var(--accent)">&larr; Back to signal generator</a></div>
+
+<!-- ===== AUTH SCREEN ===== -->
+<div id="authScreen">
+  <div class="card">
+    <div class="tabs">
+      <button id="tabLoginBtn" class="active">Log in</button>
+      <button id="tabRegisterBtn">Register</button>
+    </div>
+
+    <div id="loginForm">
+      <label>Email</label>
+      <input id="loginEmail" type="email" placeholder="you@email.com">
+      <label>Password</label>
+      <input id="loginPassword" type="password" placeholder="Your password">
+      <button class="primary" id="loginBtn">Log in</button>
+      <div id="loginError" class="error"></div>
+    </div>
+
+    <div id="registerForm" class="hidden">
+      <label>Full name</label>
+      <input id="regName" type="text" placeholder="Your name">
+      <label>Email</label>
+      <input id="regEmail" type="email" placeholder="you@email.com">
+      <label>Password (min 8 characters)</label>
+      <input id="regPassword" type="password" placeholder="Choose a password">
+      <div id="referralNotice" class="sub hidden" style="margin-top:10px;padding:10px;background:var(--panel);border:1px solid var(--border);border-radius:8px">
+        Referred by code <b id="referralCodeDisplay"></b> — this will be permanently linked to your account.
+      </div>
+      <button class="primary" id="registerBtn">Create account</button>
+      <div id="registerError" class="error"></div>
+      <div id="registerSuccess" class="success"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AFFILIATE DASHBOARD ===== -->
+<div id="dashboardScreen" class="hidden">
+  <div class="card">
+    <h2 style="display:flex;justify-content:space-between;align-items:center">
+      Your referral link
+      <button class="link" id="logoutBtn">Log out</button>
+    </h2>
+    <div class="sub">Every registered user gets one automatically. Share it — you'll earn a commission the moment someone who registers through it purchases a subscription.</div>
+    <div class="link-row">
+      <input id="referralLinkInput" type="text" readonly>
+      <button id="copyLinkBtn">Copy</button>
+    </div>
+    <div id="copiedMsg" class="success"></div>
+  </div>
+
+  <div class="card">
+    <h2>Performance</h2>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="value" id="statClicks">–</div><div class="label">Total clicks</div></div>
+      <div class="stat-box"><div class="value" id="statRegistrations">–</div><div class="label">Registrations</div></div>
+      <div class="stat-box"><div class="value" id="statPaid">–</div><div class="label">Paid subscriptions</div></div>
+      <div class="stat-box"><div class="value" id="statConversion">–</div><div class="label">Conversion rate</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Commission</h2>
+    <div class="sub">$<span id="commissionRate">–</span> per successful subscription (set by the operator).</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="value" id="statPending">–</div><div class="label">Pending</div></div>
+      <div class="stat-box"><div class="value" id="statApproved">–</div><div class="label">Approved</div></div>
+      <div class="stat-box"><div class="value" id="statPaidOut">–</div><div class="label">Paid</div></div>
+      <div class="stat-box"><div class="value" id="statTotal">–</div><div class="label">Total earnings</div></div>
+    </div>
+    <table id="commissionsTable">
+      <thead><tr><th>Referred user</th><th>Plan</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="sub" id="noCommissions">No commissions yet — share your link above.</div>
+  </div>
+
+  <div class="card">
+    <h2>Withdraw earnings</h2>
+    <div class="sub" id="withdrawSub">Loading…</div>
+    <label>Payout method</label>
+    <input id="withdrawMethod" type="text" placeholder="JazzCash / Easypaisa / Bank transfer">
+    <label>Destination (account number / IBAN / etc.)</label>
+    <input id="withdrawDestination" type="text" placeholder="03XXXXXXXXX or IBAN">
+    <button class="primary" id="requestWithdrawalBtn">Request withdrawal</button>
+    <div id="withdrawError" class="error"></div>
+    <div id="withdrawSuccess" class="success"></div>
+
+    <h2 style="margin-top:20px">Withdrawal history</h2>
+    <table id="withdrawalsTable">
+      <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="sub" id="noWithdrawals">No withdrawal requests yet.</div>
+  </div>
+</div>
+
+<script>
+  const BACKEND_URL = "https://quotex-signal-backend.onrender.com";
+
+  // ---------- Capture ?ref=CODE the same way index.html does ----------
+  // (see index.html's captureReferral() for the full reasoning — repeated
+  // here since this page can also be a visitor's first landing page if
+  // they clicked a link that pointed straight at /affiliate.html).
+  (function captureReferral() {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (!ref) return;
+    localStorage.setItem("pendingReferralCode", ref.toUpperCase());
+    const loggedKey = `refClickLogged_${ref.toUpperCase()}`;
+    if (!localStorage.getItem(loggedKey)) {
+      fetch(`${BACKEND_URL}/accounts/affiliate/click?code=${encodeURIComponent(ref)}`, { method: "POST" })
+        .then(() => localStorage.setItem(loggedKey, "1"))
+        .catch(() => {});
+    }
+  })();
+
+  function getTokens() {
+    return {
+      access: localStorage.getItem("qx_access_token"),
+      refresh: localStorage.getItem("qx_refresh_token"),
+    };
+  }
+  function setTokens(access, refresh) {
+    localStorage.setItem("qx_access_token", access);
+    if (refresh) localStorage.setItem("qx_refresh_token", refresh);
+  }
+  function clearTokens() {
+    localStorage.removeItem("qx_access_token");
+    localStorage.removeItem("qx_refresh_token");
+  }
+
+  // Authenticated fetch wrapper — on a 401 (expired access token), tries
+  // exactly one silent refresh via the stored refresh token before giving
+  // up and sending the person back to the login form. Mirrors the same
+  // "refresh tokens are reused, not rotated" model app/accounts/routes_auth.py
+  // documents server-side.
+  async function api(path, opts = {}, _retried = false) {
+    const { access } = getTokens();
+    const res = await fetch(BACKEND_URL + path, {
+      ...opts,
+      headers: {
+        "Content-Type": "application/json",
+        ...(access ? { Authorization: `Bearer ${access}` } : {}),
+        ...(opts.headers || {}),
+      },
+    });
+    if (res.status === 401 && !_retried) {
+      const { refresh } = getTokens();
+      if (refresh) {
+        const r = await fetch(BACKEND_URL + "/accounts/refresh", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refresh }),
+        });
+        if (r.ok) {
+          const tokens = await r.json();
+          setTokens(tokens.access_token, tokens.refresh_token);
+          return api(path, opts, true);
+        }
+      }
+      clearTokens();
+      showAuthScreen();
+      throw new Error("Your session expired. Please log in again.");
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
+    return data;
+  }
+
+  function showAuthScreen() {
+    document.getElementById("authScreen").classList.remove("hidden");
+    document.getElementById("dashboardScreen").classList.add("hidden");
+  }
+  function showDashboardScreen() {
+    document.getElementById("authScreen").classList.add("hidden");
+    document.getElementById("dashboardScreen").classList.remove("hidden");
+    loadDashboard();
+  }
+
+  // ---------------- Tabs ----------------
+  document.getElementById("tabLoginBtn").addEventListener("click", () => {
+    document.getElementById("tabLoginBtn").classList.add("active");
+    document.getElementById("tabRegisterBtn").classList.remove("active");
+    document.getElementById("loginForm").classList.remove("hidden");
+    document.getElementById("registerForm").classList.add("hidden");
+  });
+  document.getElementById("tabRegisterBtn").addEventListener("click", () => {
+    document.getElementById("tabRegisterBtn").classList.add("active");
+    document.getElementById("tabLoginBtn").classList.remove("active");
+    document.getElementById("registerForm").classList.remove("hidden");
+    document.getElementById("loginForm").classList.add("hidden");
+    const pending = localStorage.getItem("pendingReferralCode");
+    if (pending) {
+      document.getElementById("referralNotice").classList.remove("hidden");
+      document.getElementById("referralCodeDisplay").textContent = pending;
+    }
+  });
+
+  // ---------------- Register ----------------
+  document.getElementById("registerBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("registerError");
+    const successEl = document.getElementById("registerSuccess");
+    errorEl.textContent = ""; successEl.textContent = "";
+
+    const full_name = document.getElementById("regName").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const password = document.getElementById("regPassword").value;
+    const referral_code = localStorage.getItem("pendingReferralCode") || undefined;
+
+    try {
+      const body = { email, password, full_name };
+      if (referral_code) body.referral_code = referral_code;
+      const data = await api("/accounts/register", { method: "POST", body: JSON.stringify(body) });
+      successEl.textContent = data.message + " Then come back here and log in.";
+      // A code that's already been used to register is spent — clear it
+      // so a second, unrelated registration in this browser doesn't try
+      // to reuse it (the backend would ignore it anyway, first-referral-
+      // wins, but there's no reason to keep offering it).
+      localStorage.removeItem("pendingReferralCode");
+    } catch (e) {
+      errorEl.textContent = e.message || "Could not register.";
+    }
+  });
+
+  // ---------------- Login ----------------
+  document.getElementById("loginBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("loginError");
+    errorEl.textContent = "";
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+    try {
+      const res = await fetch(BACKEND_URL + "/accounts/login", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, device_label: "Web affiliate dashboard" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Login failed.");
+      setTokens(data.access_token, data.refresh_token);
+      showDashboardScreen();
+    } catch (e) {
+      errorEl.textContent = e.message || "Could not log in.";
+    }
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    try { await api("/accounts/logout", { method: "POST" }); } catch (e) {}
+    clearTokens();
+    showAuthScreen();
+  });
+
+  // ---------------- Dashboard ----------------
+  function fmtMoney(n) { return `$${Number(n).toFixed(2)}`; }
+  function esc(value) {
+    if (value === null || value === undefined) return "";
+    return String(value).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+  function fmtPct(n) { return n === null || n === undefined ? "—" : `${(n * 100).toFixed(1)}%`; }
+  function fmtDate(s) { return s ? new Date(s).toLocaleDateString() : "—"; }
+
+  async function loadDashboard() {
+    try {
+      const d = await api("/accounts/affiliate/dashboard");
+      const origin = window.location.origin + window.location.pathname.replace("affiliate.html", "index.html");
+      document.getElementById("referralLinkInput").value = `${origin}?ref=${d.referral_code}`;
+      document.getElementById("statClicks").textContent = d.total_clicks;
+      document.getElementById("statRegistrations").textContent = d.successful_registrations;
+      document.getElementById("statPaid").textContent = d.paid_subscriptions;
+      document.getElementById("statConversion").textContent = fmtPct(d.conversion_rate);
+      document.getElementById("commissionRate").textContent = d.commission_per_subscription_usd;
+      document.getElementById("statPending").textContent = fmtMoney(d.pending_commission_usd);
+      document.getElementById("statApproved").textContent = fmtMoney(d.approved_commission_usd);
+      document.getElementById("statPaidOut").textContent = fmtMoney(d.paid_commission_usd);
+      document.getElementById("statTotal").textContent = fmtMoney(d.total_earnings_usd);
+
+      if (!d.enabled) {
+        document.getElementById("withdrawSub").textContent = "The affiliate program is currently disabled by the operator.";
+        document.getElementById("requestWithdrawalBtn").disabled = true;
+      } else {
+        document.getElementById("withdrawSub").textContent =
+          `Available: ${fmtMoney(d.available_for_withdrawal_usd)} — minimum withdrawal is ${fmtMoney(d.min_withdrawal_usd)}.`;
+      }
+    } catch (e) { /* api() already redirects to login on auth failure */ }
+
+    try {
+      const c = await api("/accounts/affiliate/commissions");
+      const tbody = document.querySelector("#commissionsTable tbody");
+      tbody.innerHTML = "";
+      document.getElementById("noCommissions").classList.toggle("hidden", c.commissions.length > 0);
+      c.commissions.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${esc(row.referred_email)}</td><td>${esc(row.plan_id)}</td>` +
+          `<td>${fmtMoney(row.amount_cents / 100)}</td>` +
+          `<td><span class="badge ${esc(row.status)}">${esc(row.status)}</span></td>`;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {}
+
+    try {
+      const w = await api("/accounts/affiliate/withdrawals");
+      const tbody = document.querySelector("#withdrawalsTable tbody");
+      tbody.innerHTML = "";
+      document.getElementById("noWithdrawals").classList.toggle("hidden", w.withdrawals.length > 0);
+      w.withdrawals.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${fmtDate(row.requested_at)}</td><td>${fmtMoney(row.amount_cents / 100)}</td>` +
+          `<td>${esc(row.method)}</td><td><span class="badge ${esc(row.status)}">${esc(row.status)}</span></td>`;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {}
+  }
+
+  document.getElementById("copyLinkBtn").addEventListener("click", () => {
+    const input = document.getElementById("referralLinkInput");
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+      const msg = document.getElementById("copiedMsg");
+      msg.textContent = "Copied!";
+      setTimeout(() => { msg.textContent = ""; }, 2000);
+    });
+  });
+
+  document.getElementById("requestWithdrawalBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("withdrawError");
+    const successEl = document.getElementById("withdrawSuccess");
+    errorEl.textContent = ""; successEl.textContent = "";
+    const method = document.getElementById("withdrawMethod").value.trim();
+    const destination = document.getElementById("withdrawDestination").value.trim();
+    if (!method || !destination) {
+      errorEl.textContent = "Provide a payout method and destination.";
+      return;
+    }
+    try {
+      const data = await api("/accounts/affiliate/withdrawals", {
+        method: "POST", body: JSON.stringify({ method, destination }),
+      });
+      successEl.textContent = `Withdrawal of ${fmtMoney(data.amount_usd)} requested — pending admin review.`;
+      document.getElementById("withdrawMethod").value = "";
+      document.getElementById("withdrawDestination").value = "";
+      loadDashboard();
+    } catch (e) {
+      errorEl.textContent = e.message || "Could not request withdrawal.";
+    }
+  });
+
+  // ---------------- Boot ----------------
+  if (getTokens().access) {
+    showDashboardScreen();
+  } else {
+    showAuthScreen();
+    if (localStorage.getItem("pendingReferralCode")) {
+      document.getElementById("tabRegisterBtn").click();
+    }
+  }
+</script>
+</body>
+</html>
