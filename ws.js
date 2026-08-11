@@ -22,14 +22,19 @@
   // rather than a bare doubling series, which would blow past 30s.
   const BACKOFF_SCHEDULE_MS = [1000, 2000, 4000, 8000, 15000, 30000];
 
-  function wsUrlFromBackend(backendUrl) {
+  function wsUrlFromBackend(backendUrl, licenseKey) {
     // BACKEND_URL is already an absolute http(s) URL (see index.html) —
     // swap the scheme and append /ws rather than requiring a second
-    // constant to stay in sync with it.
-    return backendUrl.replace(/^http/, "ws") + "/ws";
+    // constant to stay in sync with it. license_key is now REQUIRED by
+    // the backend (see app/main.py's websocket_endpoint) — connecting
+    // without one gets a clean 4401 close instead of room data, since
+    // "premium" carries paid signal alerts that must be gated the same
+    // way every other paid feature in this app is.
+    const base = backendUrl.replace(/^http/, "ws") + "/ws";
+    return base + "?license_key=" + encodeURIComponent(licenseKey || "");
   }
 
-  function createWsClient(backendUrl) {
+  function createWsClient(backendUrl, licenseKey) {
     let socket = null;
     let reconnectAttempt = 0;
     let reconnectTimer = null;
@@ -51,6 +56,13 @@
       reconnectAttempt += 1;
       setStatus("connecting");
       reconnectTimer = setTimeout(connect, delay);
+    }
+
+    const externalListeners = {}; // type -> array of callbacks, for message types this file doesn't own the meaning of
+
+    function on(type, callback) {
+      if (!externalListeners[type]) externalListeners[type] = [];
+      externalListeners[type].push(callback);
     }
 
     function applyDelta(message) {
@@ -99,6 +111,13 @@
         case "error":
           console.warn("[ws] server error:", message.detail);
           break;
+        default:
+          // Message types this file doesn't own the meaning of (e.g.
+          // "premium_signal" from app/signals/premium_watcher.py) just
+          // get handed to whoever registered interest via on(type, cb) —
+          // keeps this file from needing to know about every feature
+          // that ever rides over the same socket.
+          (externalListeners[message.type] || []).forEach((cb) => cb(message));
       }
     }
 
@@ -116,7 +135,7 @@
       intentionalClose = false;
       setStatus("connecting");
       try {
-        socket = new WebSocket(wsUrlFromBackend(backendUrl));
+        socket = new WebSocket(wsUrlFromBackend(backendUrl, licenseKey));
       } catch (e) {
         scheduleReconnect();
         return;
@@ -151,7 +170,7 @@
       setStatus("disconnected");
     }
 
-    return { connect, disconnect, setRoom };
+    return { connect, disconnect, setRoom, on };
   }
 
   window.createWsClient = createWsClient;

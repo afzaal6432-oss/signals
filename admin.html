@@ -566,6 +566,25 @@
     }[c]));
   }
 
+  // esc() alone is NOT enough for a value interpolated into an inline
+  // event-handler attribute's JS string literal, e.g.
+  // onclick="fn('${value}')" — browsers HTML-entity-DECODE an attribute
+  // value before parsing it as JavaScript, so esc()'s "&#39;" for a
+  // quote silently turns back into a real "'" at that point, breaking
+  // right back out of the JS string. This escapes for the JS-string
+  // layer FIRST (backslash, then quote), THEN esc()'s the result for
+  // the HTML-attribute layer — order matters, doing it the other way
+  // round doesn't work. Every value currently used this way (order/key
+  // IDs, voucher filenames) is a server-generated UUID and couldn't
+  // actually carry an attack today, but the pattern itself is a latent
+  // footgun for the next field someone interpolates this way — hence
+  // fixing it properly rather than leaving a comment saying "these
+  // happen to be safe".
+  function escJsAttr(value) {
+    const jsEscaped = String(value ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    return esc(jsEscaped);
+  }
+
   function getSecret() { return sessionStorage.getItem("qx_admin_secret"); }
 
   async function api(path, opts = {}) {
@@ -1159,7 +1178,7 @@
           <td>${esc(o.email)}</td>
           <td>${o.plan_days} days</td>
           <td style="font-family:monospace">${esc(o.license_key)}</td>
-          <td>${o.delivered ? "yes" : `no — send it! <button class="secondary" style="padding:4px 8px;font-size:11px;margin-left:6px" onclick="markPaddleDelivered('${o.id}')">Mark delivered</button>`}</td>
+          <td>${o.delivered ? "yes" : `no — send it! <button class="secondary" style="padding:4px 8px;font-size:11px;margin-left:6px" onclick="markPaddleDelivered('${escJsAttr(o.id)}')">Mark delivered</button>`}</td>
         </tr>`).join("");
       document.getElementById("paddleOrdersBody").innerHTML = rows || `<tr><td colspan="4">No orders yet.</td></tr>`;
     } catch (e) {
@@ -1185,11 +1204,11 @@
           <td>${esc(r.contact)}</td>
           <td>${esc((r.plan_id || "?").charAt(0).toUpperCase() + (r.plan_id || "?").slice(1))} — ${r.duration_days} days</td>
           <td>${r.transaction_note ? esc(r.transaction_note) : "<em>(none)</em>"}</td>
-          <td>${r.voucher_filename ? `<button class="secondary" style="padding:4px 8px;font-size:11px" onclick="viewVoucher('${r.voucher_filename}')">View</button>` : "<em>none</em>"}</td>
+          <td>${r.voucher_filename ? `<button class="secondary" style="padding:4px 8px;font-size:11px" onclick="viewVoucher('${escJsAttr(r.voucher_filename)}')">View</button>` : "<em>none</em>"}</td>
           <td class="actions">
-            <button onclick="approveRequest('${r.id}')">Approve &amp; generate key</button>
-            <button class="secondary" onclick="rejectRequest('${r.id}')">Reject</button>
-            <button class="secondary" onclick="dismissRequest('${r.id}')">Dismiss</button>
+            <button onclick="approveRequest('${escJsAttr(r.id)}')">Approve &amp; generate key</button>
+            <button class="secondary" onclick="rejectRequest('${escJsAttr(r.id)}')">Reject</button>
+            <button class="secondary" onclick="dismissRequest('${escJsAttr(r.id)}')">Dismiss</button>
           </td>
         </tr>`).join("");
       document.getElementById("paymentRequestsBody").innerHTML = rows || `<tr><td colspan="6">No pending requests.</td></tr>`;
@@ -1253,6 +1272,7 @@
             <button class="secondary" onclick="revokeById(${k.id})">Revoke</button>
             <button class="secondary" onclick="reactivateById(${k.id})">Reactivate</button>
             <button class="secondary" onclick="extendById(${k.id})">Extend</button>
+            <button class="secondary" onclick="viewHistoryById(${k.id})">History</button>
           </td>
         </tr>`).join("");
       document.getElementById("keysBody").innerHTML = rows || `<tr><td colspan="6">No keys found.</td></tr>`;
@@ -1260,6 +1280,23 @@
       document.getElementById("listError").textContent = e.message;
       throw e;
     }
+  }
+
+  async function viewHistoryById(id) {
+    // Signal history is admin-only now (moved off the user-facing app —
+    // see app/main.py's removal note and app/admin_routes.py's
+    // GET /admin/keys/{license_id}/history).
+    try {
+      const data = await api(`/admin/keys/${id}/history`);
+      if (!data.history || !data.history.length) {
+        alert(`License #${id}: no signals generated yet.`);
+        return;
+      }
+      const lines = data.history.map(h =>
+        `${new Date(h.timestamp).toLocaleString()} — ${h.asset} ${h.signal} (${h.confidence}%) — ${h.outcome || "pending"}`
+      );
+      alert(`License #${id} — last ${lines.length} signals:\n\n${lines.join("\n")}`);
+    } catch (e) { alert(e.message); }
   }
 
   function searchKeysByName() {

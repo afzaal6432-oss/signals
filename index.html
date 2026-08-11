@@ -126,6 +126,68 @@
   }
   .plan-option.selected { border-color: var(--accent); background: rgba(79,140,255,0.08); }
   .plan-option input[type="radio"] { width: auto; margin-right: 10px; }
+
+  /* ---------- Signal Center (new post-login home) ---------- */
+  .status-card {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  .status-item { text-align: center; padding: 8px 4px; }
+  .status-item .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .status-item .value { font-size: 17px; font-weight: 700; margin-top: 4px; }
+  @media (min-width: 480px) { .status-card { grid-template-columns: repeat(3, 1fr); } }
+
+  .mode-tabs { display: flex; gap: 8px; margin: 18px 0 4px; }
+  .mode-tab {
+    flex: 1; text-align: center; padding: 14px 8px; border-radius: 12px;
+    border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+    color: var(--muted); font-weight: 700; font-size: 14.5px; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .mode-tab.active { border-color: var(--accent); background: rgba(79,140,255,0.12); color: #fff; }
+
+  /* Beginner-mode: the generate button is the single biggest, most
+     obvious thing on the whole screen — no scrolling, no ambiguity
+     about what to press. */
+  button.giant-primary {
+    display: block; width: 100%; margin-top: 22px; padding: 26px 16px;
+    font-size: 22px; font-weight: 800; letter-spacing: 0.01em;
+    background: linear-gradient(135deg, var(--accent), #7b5cff);
+    border: none; border-radius: 18px; color: #fff; cursor: pointer;
+    box-shadow: 0 8px 30px rgba(79,140,255,0.35);
+    transition: transform 0.1s ease;
+  }
+  button.giant-primary:active { transform: scale(0.98); }
+  button.giant-primary:disabled { background: #33384a; box-shadow: none; color: var(--muted); }
+
+  /* ---------- Premium Signal tab ---------- */
+  .watching-card {
+    text-align: center; padding: 34px 16px;
+  }
+  .watching-pulse {
+    width: 16px; height: 16px; border-radius: 50%; background: var(--accent);
+    margin: 0 auto 16px; animation: watchPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes watchPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0.6); }
+    50% { box-shadow: 0 0 0 14px rgba(79,140,255,0); }
+  }
+  .premium-reveal {
+    text-align: center; padding: 26px 18px; border-radius: 18px;
+    animation: revealPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .premium-reveal.BUY { background: rgba(53,196,106,0.14); border: 1px solid var(--green); }
+  .premium-reveal.SELL { background: rgba(255,90,90,0.14); border: 1px solid var(--red); }
+  @keyframes revealPop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .premium-reveal .direction { font-size: 44px; font-weight: 900; letter-spacing: 0.02em; }
+  .premium-reveal.BUY .direction { color: var(--green); }
+  .premium-reveal.SELL .direction { color: var(--red); }
+  .premium-flash { animation: screenFlash 0.5s ease; }
+  @keyframes screenFlash { 0% { background: rgba(255,255,255,0); } 15% { background: rgba(255,255,255,0.25); } 100% { background: rgba(255,255,255,0); } }
+
+  @media (max-width: 420px) {
+    button.giant-primary { font-size: 19px; padding: 22px 12px; }
+    .status-item .value { font-size: 15px; }
+  }
   #result {
     margin-top: 22px; padding: 18px; border-radius: 12px; display: none;
     border: 1px solid var(--border); position: relative; overflow: hidden;
@@ -205,9 +267,9 @@
 </head>
 <body>
 
-  <div id="tickerBar" class="ticker-bar">
-    <div class="ticker-track" id="tickerTrack">Loading market data…</div>
-  </div>
+  <!-- Live price ticker removed from the user page per product decision —
+       market data still flows internally (premium watcher, market status
+       card) but isn't displayed raw to users anymore. -->
 
   <div id="bgLayer" class="theme-nebula">
     <div class="bubbles" aria-hidden="true">
@@ -335,39 +397,109 @@
   </div>
 
   <!-- ===== SCREEN 3: GENERATE SIGNAL (shown once a key is saved) ===== -->
-  <div id="generateScreen" class="hidden">
-    <div class="sub">Licensed — <button class="link" style="display:inline;padding:0" id="changeKeyBtn">change key</button></div>
-
-    <div style="font-size:13px;opacity:0.8;margin-bottom:8px">
-      Current time: <b id="tradeClock">--:--:--</b>
+  <div id="signalCenterScreen" class="hidden">
+    <div class="sub" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Licensed — <button class="link" style="display:inline;padding:0" id="changeKeyBtn">change key</button></span>
+      <button class="link" style="display:inline;padding:0" id="howToBtn">How to use</button>
     </div>
 
-    <label>Asset</label>
-    <select id="asset"><option>Loading...</option></select>
-
-    <label>Signal validity window</label>
-    <select id="duration">
-      <option value="15">15 seconds</option>
-      <option value="30">30 seconds</option>
-      <option value="60" selected>1 minute</option>
-      <option value="120">2 minutes</option>
-      <option value="180">3 minutes</option>
-      <option value="300">5 minutes</option>
-      <option value="600">10 minutes</option>
-      <option value="900">15 minutes</option>
-      <option value="1800">30 minutes</option>
-      <option value="3600">1 hour</option>
-    </select>
-
-    <button class="primary" id="generateBtn">Generate Signal</button>
-
-    <div id="result"></div>
-    <div id="genError" class="error"></div>
-
-    <label style="margin-top:20px">Signal history</label>
-    <div id="historyPanel" class="card" style="max-height:220px;overflow-y:auto">
-      <div class="sub">No signals generated yet.</div>
+    <div class="card status-card" id="statusCard">
+      <div class="status-item">
+        <div class="label">Plan</div>
+        <div class="value" id="statPlan">—</div>
+      </div>
+      <div class="status-item">
+        <div class="label">Subscription</div>
+        <div class="value" id="statSubscription">—</div>
+      </div>
+      <div class="status-item">
+        <div class="label">Market</div>
+        <div class="value" id="statMarket">—</div>
+      </div>
     </div>
+
+    <div class="mode-tabs">
+      <div class="mode-tab active" id="tabInstant" data-mode="instant">⚡ Instant Signal</div>
+      <div class="mode-tab" id="tabPremium" data-mode="premium">🔔 Premium Signal</div>
+    </div>
+
+    <!-- ===== Instant Signal (existing generate flow) ===== -->
+    <div id="instantPanel">
+      <div style="font-size:13px;opacity:0.8;margin:14px 0 8px">
+        Current time: <b id="tradeClock">--:--:--</b>
+      </div>
+
+      <label>Asset</label>
+      <select id="asset"><option>Loading...</option></select>
+
+      <label>Timeframe</label>
+      <!-- Only 1 minute and 5 minutes are offered — these are the only
+           timeframes this app can genuinely calculate from (real OHLCV
+           resampling of the 1-minute base candles, not a label swap —
+           see app/signals/indicators.py's resample_candles and
+           app/main.py's SignalRequest.duration_seconds comment for why
+           15m/30m/1h aren't offered: with the current candle history
+           depth, they'd never have enough resampled candles to pass the
+           engine's own data-sufficiency check and would always return
+           WAIT, which would be worse than not offering them at all. -->
+      <select id="duration">
+        <option value="60" selected>1 minute</option>
+        <option value="300">5 minutes</option>
+      </select>
+
+      <button class="giant-primary" id="generateBtn">GENERATE SIGNAL</button>
+
+      <div id="result"></div>
+      <div id="genError" class="error"></div>
+    </div>
+
+    <!-- ===== Premium Signal (honest watch-and-notify mode) ===== -->
+    <div id="premiumPanel" class="hidden">
+      <!-- Deliberately no promised time or pre-announced confidence —
+           the backend only knows a setup is real once it's actually
+           found (see app/signals/premium_watcher.py). This card just
+           says "watching" until a real WebSocket event arrives. -->
+      <div class="card watching-card" id="premiumWatching">
+        <div class="watching-pulse"></div>
+        <div id="premiumWatchingText" style="font-size:15px;font-weight:600">Watching the market for a high-confidence setup…</div>
+        <div class="sub" style="margin-top:6px">You'll be notified the instant one appears — no fixed schedule, no guesswork.</div>
+      </div>
+      <div id="premiumReveal" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- ===== HOW TO USE ===== -->
+  <div id="howToScreen" class="hidden">
+    <div class="sub"><button class="link" style="display:inline;padding:0" id="backFromHowToBtn">← Back</button></div>
+    <h2 style="margin:10px 0 4px">How to use</h2>
+    <div class="sub" style="margin-bottom:16px">A few short videos to get you started.</div>
+
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px">1. How to generate a signal</div>
+      <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden">
+        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;inset:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px">2. How to buy a subscription</div>
+      <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden">
+        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;inset:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px">3. How to trade</div>
+      <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden">
+        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;inset:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px">4. FAQ</div>
+      <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden">
+        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;inset:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe>
+      </div>
+    </div>
+    <!-- Placeholder links — swap the video IDs above (the part after
+         /embed/) for your real uploads whenever they're ready. -->
   </div>
 
   <!-- ===== AI SUPPORT CHAT WIDGET ===== -->
@@ -443,7 +575,7 @@
 
   // ---------- screen switching ----------
   function showScreen(id) {
-    ["buyScreen", "licenseScreen", "generateScreen"].forEach(s => {
+    ["buyScreen", "licenseScreen", "signalCenterScreen", "howToScreen"].forEach(s => {
       document.getElementById(s).classList.toggle("hidden", s !== id);
     });
   }
@@ -580,13 +712,14 @@
   function init() {
     initThemePicker();
     initInstallPrompt();
-    initTicker();
-    initWebSocket();
+    initModeTabs();
+    initHowTo();
     const savedKey = getSavedLicenseKey();
     if (savedKey) {
-      showScreen("generateScreen");
+      showScreen("signalCenterScreen");
       loadAssets();
-      refreshSignalHistory();
+      loadDashboard();
+      initWebSocket();
     } else {
       showScreen("buyScreen");
     }
@@ -594,18 +727,198 @@
   }
 
   // ---------- Live WebSocket feed ----------
-  // Additive fast path alongside the REST ticker poll above — see ws.js
-  // for the full reconnect/heartbeat/stale-packet handling. Only the
-  // "quotex" room is used today since this UI has no forex-mode toggle
-  // yet (see AppState.currentMode's comment in state.js); wsClient.setRoom()
-  // is exposed on window specifically so that toggle has something to
-  // call without touching this file again once it exists.
+  // Subscribes to the "premium" room — see app/signals/premium_watcher.py
+  // and app/ws/connection_manager.py's VALID_ROOMS. This page no longer
+  // displays a live ticker (removed per product decision), so the
+  // quotex/forex asset-ticker rooms aren't needed here; "premium" is the
+  // one honest live feed this page actually uses: real-time notification
+  // the instant the engine finds a genuinely high-confidence setup.
   let wsClient = null;
   function initWebSocket() {
-    wsClient = createWsClient(BACKEND_URL);
+    if (wsClient) {
+      // Idempotent: called from both the page-load path and the
+      // just-unlocked path, and must never leave a prior connection
+      // (possibly authenticated with a DIFFERENT license key — see the
+      // changeKeyBtn handler) running alongside a new one.
+      wsClient.disconnect();
+    }
+    const key = getSavedLicenseKey();
+    wsClient = createWsClient(BACKEND_URL, key);
+    wsClient.on("premium_signal", handlePremiumSignal);
+    wsClient.on("premium_signal_approaching", handlePremiumSignalApproaching);
+    wsClient.on("premium_signal_invalidated", handlePremiumSignalInvalidated);
     wsClient.connect();
-    wsClient.setRoom("quotex");
+    wsClient.setRoom("premium");
     window.wsClient = wsClient;
+  }
+
+  // ---------- Signal Center: dashboard status card ----------
+  async function loadDashboard() {
+    const key = getSavedLicenseKey();
+    if (!key) return;
+    try {
+      const [licenseRes, marketRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/license/check`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ license_key: key }),
+        }),
+        fetch(`${BACKEND_URL}/market-status`),
+      ]);
+
+      const planEl = document.getElementById("statPlan");
+      const subEl = document.getElementById("statSubscription");
+      const marketEl = document.getElementById("statMarket");
+
+      if (licenseRes.ok) {
+        const lic = await licenseRes.json();
+        planEl.textContent = lic.label && lic.label.trim() ? lic.label : "Standard";
+        if (!lic.expires_at) {
+          subEl.textContent = "Lifetime";
+          subEl.style.color = "var(--green)";
+        } else {
+          const expires = new Date(lic.expires_at);
+          const daysLeft = Math.ceil((expires - new Date()) / 86400000);
+          subEl.textContent = daysLeft > 0 ? `Active · ${daysLeft}d left` : "Expired";
+          subEl.style.color = daysLeft > 0 ? "var(--green)" : "var(--red)";
+        }
+      } else {
+        planEl.textContent = "—";
+        subEl.textContent = "Check failed";
+        subEl.style.color = "var(--red)";
+      }
+
+      if (marketRes.ok) {
+        const mkt = await marketRes.json();
+        marketEl.textContent = mkt.open
+          ? (mkt.active_sessions[0] || "Open")
+          : "Closed";
+        marketEl.style.color = mkt.open ? "var(--green)" : "var(--muted)";
+      }
+    } catch (e) {
+      // Status card is supplementary — a failed fetch shouldn't block
+      // the actual signal-generation flow below it.
+    }
+  }
+
+  // ---------- Signal Center: mode tabs ----------
+  function initModeTabs() {
+    const tabInstant = document.getElementById("tabInstant");
+    const tabPremium = document.getElementById("tabPremium");
+    const instantPanel = document.getElementById("instantPanel");
+    const premiumPanel = document.getElementById("premiumPanel");
+
+    function setMode(mode) {
+      AppState.set("ui.signalMode", mode);
+      tabInstant.classList.toggle("active", mode === "instant");
+      tabPremium.classList.toggle("active", mode === "premium");
+      instantPanel.classList.toggle("hidden", mode !== "instant");
+      premiumPanel.classList.toggle("hidden", mode !== "premium");
+    }
+
+    tabInstant.addEventListener("click", () => setMode("instant"));
+    tabPremium.addEventListener("click", () => {
+      setMode("premium");
+      ensureNotificationPermission();
+    });
+  }
+
+  // ---------- Signal Center: Premium Signal reveal ----------
+  // No countdown to a promised time, no pre-announced confidence level —
+  // this only ever fires in response to a REAL WebSocket event from
+  // app/signals/premium_watcher.py, carrying the actual just-computed
+  // confidence and reasoning. The "watching" card (see markup) is all
+  // that shows before this happens.
+  function handlePremiumSignal(message) {
+    const watching = document.getElementById("premiumWatching");
+    const reveal = document.getElementById("premiumReveal");
+    if (!watching || !reveal) return;
+
+    watching.classList.add("hidden");
+    reveal.classList.remove("hidden");
+
+    const dirWord = message.signal === "BUY" ? "BUY / CALL" : "SELL / PUT";
+    const genTime = new Date(message.generated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    reveal.className = `card premium-reveal ${message.signal}`;
+    reveal.innerHTML = `
+      <div class="direction">${dirWord}</div>
+      <div style="font-size:20px;font-weight:700;margin-top:6px">${message.asset.replace(/(.{3})(.{3})/, "$1/$2")}</div>
+      <div style="margin-top:10px;font-size:14px">
+        Confidence: <b>${message.confidence}%</b> (${message.category})
+      </div>
+      <div class="sub" style="margin-top:8px">${message.explanation}</div>
+      <div class="sub" style="margin-top:4px">Volatility: ${message.volatility_label}${message.volatility_pct != null ? ` (${message.volatility_pct}%)` : ""}</div>
+      <div class="sub" style="margin-top:10px;font-size:11px">Signal ID ${message.signal_id} · ${genTime}</div>
+      <button class="link" id="premiumBackBtn" style="margin-top:12px">Keep watching for the next one</button>
+    `;
+
+    document.body.classList.add("premium-flash");
+    setTimeout(() => document.body.classList.remove("premium-flash"), 600);
+    playSignalChime();
+
+    document.getElementById("premiumBackBtn").addEventListener("click", () => {
+      reveal.classList.add("hidden");
+      reveal.innerHTML = "";
+      watching.classList.remove("hidden");
+      setWatchingText("Watching the market for a high-confidence setup…");
+    });
+  }
+
+  // ---------- Premium Signal: 60s/30s approaching notices ----------
+  // Fires from app/signals/scheduled_signal.py's ScheduledSignalController
+  // — a REAL candidate was already found and is genuinely scheduled to
+  // reveal soon (never a fixed number pulled from thin air; the final
+  // confidence/direction shown at reveal time is always freshly
+  // recomputed, may differ from whatever qualified it initially, and
+  // may not appear at all if the setup stopped holding — see
+  // handlePremiumSignalInvalidated below).
+  function handlePremiumSignalApproaching(message) {
+    const secs = Math.round(message.seconds_remaining);
+    setWatchingText(`A setup is forming on ${message.asset.replace(/(.{3})(.{3})/, "$1/$2")} — revealing in about ${secs}s…`);
+    notifyBrowser("Premium signal approaching", `${message.asset.replace(/(.{3})(.{3})/, "$1/$2")} — revealing in about ${secs}s`);
+  }
+
+  // ---------- Premium Signal: invalidated before reveal ----------
+  // The setup that was scheduled no longer holds under a fresh
+  // recalculation — shown honestly rather than silently replaced by
+  // whatever comes next, or worse, revealed anyway using stale data.
+  function handlePremiumSignalInvalidated(message) {
+    setWatchingText(`The ${message.asset.replace(/(.{3})(.{3})/, "$1/$2")} setup didn't hold up — back to watching…`);
+  }
+
+  function setWatchingText(text) {
+    const el = document.getElementById("premiumWatchingText");
+    if (el) el.textContent = text;
+  }
+
+  // Optional layer, never required for the core feature to work:
+  // requests browser notification permission only when the user opens
+  // the Premium tab (not on page load, to avoid an unsolicited
+  // permission prompt), and silently does nothing if the API is
+  // unavailable or permission is denied — the in-app "approaching"
+  // text update above always works regardless.
+  let notificationsRequested = false;
+  function ensureNotificationPermission() {
+    if (notificationsRequested || typeof Notification === "undefined") return;
+    notificationsRequested = true;
+    if (Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }
+  function notifyBrowser(title, body) {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    try {
+      new Notification(title, { body, tag: "premium-signal" }); // tag dedupes: a second call replaces, never stacks
+    } catch (e) {
+      // Some browsers throw if a service worker context is expected —
+      // this is a nice-to-have layer, never worth surfacing an error for.
+    }
+  }
+
+  // ---------- How To Use ----------
+  function initHowTo() {
+    document.getElementById("howToBtn").addEventListener("click", () => showScreen("howToScreen"));
+    document.getElementById("backFromHowToBtn").addEventListener("click", () => showScreen("signalCenterScreen"));
   }
 
 
@@ -623,6 +936,10 @@
   document.getElementById("showBuyScreenBtn").addEventListener("click", () => showScreen("buyScreen"));
   document.getElementById("changeKeyBtn").addEventListener("click", () => {
     clearLicenseKey();
+    if (wsClient) {
+      wsClient.disconnect();
+      wsClient = null;
+    }
     showScreen("licenseScreen");
   });
 
@@ -804,8 +1121,10 @@
       // Only persist and show the dashboard once the backend has actually
       // confirmed the key exists and is unrevoked/unexpired.
       saveLicenseKey(key);
-      showScreen("generateScreen");
+      showScreen("signalCenterScreen");
       loadAssets();
+      loadDashboard();
+      initWebSocket();
     } catch (e) {
       // Backend unreachable — do NOT let the user in. Previously this
       // step never called the backend at all, so a random key (or a
@@ -853,55 +1172,6 @@
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
-  // ---------- Live asset ticker ----------
-  const ARROW = { up: "▲", down: "▼", flat: "◆" };
-
-  // Single render path for ticker data, regardless of whether it arrived
-  // via the REST poll below or a WebSocket delta (ws.js writes into the
-  // same AppState.market.ticker path) — avoids the two having slightly
-  // different rendering logic that could drift out of sync over time.
-  function renderTicker(list) {
-    const track = document.getElementById("tickerTrack");
-    if (!list || !list.length) {
-      track.textContent = "Market data unavailable.";
-      return;
-    }
-    track.innerHTML = list.map(t => {
-      const cls = !t.feed_healthy ? "t-stale" : (t.change === "up" ? "t-up" : t.change === "down" ? "t-down" : "");
-      const priceText = t.price != null ? t.price.toFixed(5) : "—";
-      const label = t.asset.replace(/(.{3})(.{3})/, "$1/$2");
-      return `<span class="t-item ${cls}">${label} ${priceText} ${t.feed_healthy ? ARROW[t.change] : "…"}</span>`;
-    }).join("");
-  }
-
-  async function refreshTicker() {
-    // Sequence guard: on a slow/congested connection a poll can resolve
-    // after a later one already landed. Without this, the ticker can
-    // flash back to older prices for a frame — harmless-looking, but the
-    // same pattern in the signal result below is not harmless, so both
-    // use the same guard for consistency.
-    const token = AppState.beginRequest("ticker");
-    try {
-      const res = await fetch(`${BACKEND_URL}/assets/ticker`);
-      const data = await res.json();
-      if (!AppState.isCurrent("ticker", token)) return; // a newer poll already started
-      AppState.set("market.ticker", data.ticker || []);
-    } catch (e) {
-      // silent — the ticker is decorative, never worth an error banner
-    }
-  }
-
-  function initTicker() {
-    AppState.subscribe("market.ticker", renderTicker);
-    refreshTicker();
-    // This REST poll is now a fallback/initial-paint path, not the
-    // primary feed — ws.js delivers live updates in near-real-time over
-    // the WebSocket when connected. Slowed from 20s to 60s accordingly:
-    // still catches the case where the socket has been down a while,
-    // without polling on top of an already-live connection.
-    setInterval(refreshTicker, 60000);
-  }
-
   // ---------- Audio cue on signal generation ----------
   // Synthesized with the Web Audio API — no external sound file needed,
   // and it's triggered directly inside a click handler (the Generate
@@ -923,46 +1193,6 @@
     } catch (e) {
       // Web Audio unsupported/blocked — silently skip, never break the
       // actual signal generation over a decorative sound effect.
-    }
-  }
-
-  // ---------- Signal history panel ----------
-  function outcomeBadge(outcome) {
-    if (outcome === "win") return '<span style="color:var(--green);font-weight:600">WIN</span>';
-    if (outcome === "loss") return '<span style="color:var(--red);font-weight:600">LOSS</span>';
-    if (outcome === "pending") return '<span style="color:var(--muted)">pending</span>';
-    return '<span style="color:var(--muted)">—</span>';
-  }
-
-  async function refreshSignalHistory() {
-    const key = getSavedLicenseKey();
-    const panel = document.getElementById("historyPanel");
-    if (!key || !panel) return;
-    try {
-      const res = await fetch(`${BACKEND_URL}/signals/history`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ license_key: key }),
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (!data.history || !data.history.length) {
-        panel.innerHTML = '<div class="sub">No signals generated yet.</div>';
-        return;
-      }
-      panel.innerHTML = data.history.map(h => {
-        const tier = confidenceTier(h.confidence);
-        const time = new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const dirColor = h.signal === "BUY" ? "var(--green)" : h.signal === "SELL" ? "var(--red)" : "var(--amber)";
-        return `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12.5px">
-            <span>${time} · ${h.asset} · <span style="color:${dirColor};font-weight:600">${h.signal}</span></span>
-            <span style="color:${tier.color}">${tier.label}</span>
-            <span>${outcomeBadge(h.outcome)}</span>
-          </div>`;
-      }).join("");
-    } catch (e) {
-      // history is supplementary — a failed fetch shouldn't block anything else
     }
   }
 
@@ -1087,7 +1317,6 @@
           }
         }
         playSignalChime();
-        refreshSignalHistory();
       }
     } catch (e) {
       if (AppState.isCurrent("generateSignal", token)) {
