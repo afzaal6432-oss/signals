@@ -996,7 +996,7 @@
       const s = await res.json();
       let html = `${s.instructions}<br>`;
       if (s.jazzcash_number) {
-        html += `<div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px"><b>JazzCash</b><br>${s.jazzcash_number}${s.jazzcash_account_title ? " — " + s.jazzcash_account_title : ""}</div>`;
+        html += `<div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px"><b>JazzCash</b><br>${s.jazzcash_number}${s.jazzcash_account_title ? " — " + s.jazzcash_account_title : ""}${s.jazzcash_qr_filename ? `<br><img src="${BACKEND_URL}/payment/qr/${encodeURIComponent(s.jazzcash_qr_filename)}" alt="JazzCash QR code" style="max-width:180px;margin-top:8px;border-radius:8px;border:1px solid var(--border)">` : ""}</div>`;
       }
       if (s.easypaisa_number) {
         html += `<div style="margin:10px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px"><b>Easypaisa</b><br>${s.easypaisa_number}${s.easypaisa_account_title ? " — " + s.easypaisa_account_title : ""}</div>`;

@@ -447,6 +447,18 @@
             <div><label>JazzCash number</label><input id="psJazzcashNumber" placeholder="03XXXXXXXXX"></div>
             <div><label>JazzCash account title</label><input id="psJazzcashTitle" placeholder="Account holder name"></div>
           </div>
+          <div style="margin-top:10px">
+            <label>JazzCash QR code</label>
+            <div class="sub">Shown on the subscription page next to the JazzCash details so a customer can scan-to-pay instead of typing the number.</div>
+            <div id="jazzcashQrPreview" style="margin:8px 0"></div>
+            <div class="row">
+              <div><input id="jazzcashQrFile" type="file" accept="image/jpeg,image/png,image/webp"></div>
+              <div style="flex: 0 0 auto"><button onclick="uploadJazzcashQr()">Upload / Replace</button></div>
+              <div style="flex: 0 0 auto"><button class="secondary" onclick="removeJazzcashQr()">Remove</button></div>
+            </div>
+            <div id="jazzcashQrError" class="error"></div>
+            <div id="jazzcashQrSuccess" class="success-msg"></div>
+          </div>
           <div class="row" style="margin-top:10px">
             <div><label>Easypaisa number</label><input id="psEasypaisaNumber" placeholder="03XXXXXXXXX"></div>
             <div><label>Easypaisa account title</label><input id="psEasypaisaTitle" placeholder="Account holder name"></div>
@@ -1075,8 +1087,62 @@
       for (const [elId, key] of Object.entries(PS_FIELD_MAP)) {
         document.getElementById(elId).value = d[key] || "";
       }
+      renderJazzcashQrPreview(d.jazzcash_qr_filename || "");
     } catch (e) {
       document.getElementById("paymentSettingsError").textContent = e.message;
+    }
+  }
+
+  function renderJazzcashQrPreview(filename) {
+    const el = document.getElementById("jazzcashQrPreview");
+    el.innerHTML = filename
+      ? `<img src="${BACKEND}/payment/qr/${encodeURIComponent(filename)}" style="max-width:160px;border-radius:8px;border:1px solid var(--border)">`
+      : `<span class="sub">No QR code uploaded yet.</span>`;
+  }
+
+  async function uploadJazzcashQr() {
+    document.getElementById("jazzcashQrError").textContent = "";
+    document.getElementById("jazzcashQrSuccess").textContent = "";
+    const fileInput = document.getElementById("jazzcashQrFile");
+    const file = fileInput.files[0];
+    if (!file) {
+      document.getElementById("jazzcashQrError").textContent = "Choose an image first.";
+      return;
+    }
+    const formData = new FormData();
+    formData.append("qr_image", file);
+    try {
+      // Deliberately NOT using api() here — it hardcodes
+      // Content-Type: application/json, which would break this upload
+      // (a FormData body needs the browser to set its own multipart
+      // boundary automatically; forcing a Content-Type header prevents
+      // that). Same X-Admin-Secret auth and error-handling shape as
+      // api(), just without the JSON content-type assumption.
+      const res = await fetch(`${BACKEND}/admin/config/payment-settings/jazzcash-qr`, {
+        method: "POST",
+        headers: { "X-Admin-Secret": getSecret() || "" },
+        body: formData,
+      });
+      if (res.status === 401) { logout(); throw new Error("Session expired — please log in again."); }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `Upload failed (${res.status})`);
+      renderJazzcashQrPreview(data.jazzcash_qr_filename);
+      fileInput.value = "";
+      document.getElementById("jazzcashQrSuccess").textContent = "Uploaded — live on the subscription page immediately.";
+    } catch (e) {
+      document.getElementById("jazzcashQrError").textContent = e.message;
+    }
+  }
+
+  async function removeJazzcashQr() {
+    document.getElementById("jazzcashQrError").textContent = "";
+    document.getElementById("jazzcashQrSuccess").textContent = "";
+    try {
+      await api("/admin/config/payment-settings/jazzcash-qr/remove", { method: "POST" });
+      renderJazzcashQrPreview("");
+      document.getElementById("jazzcashQrSuccess").textContent = "Removed.";
+    } catch (e) {
+      document.getElementById("jazzcashQrError").textContent = e.message;
     }
   }
 
