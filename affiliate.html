@@ -169,6 +169,7 @@
   </div>
 </div>
 
+<script src="./errors.js"></script>
 <script>
   const BACKEND_URL = "https://quotex-signal-backend.onrender.com";
 
@@ -237,7 +238,7 @@
       throw new Error("Your session expired. Please log in again.");
     }
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
+    if (!res.ok) throw AppErrors.makeError("generic", data.detail);
     return data;
   }
 
@@ -292,7 +293,7 @@
       // wins, but there's no reason to keep offering it).
       localStorage.removeItem("pendingReferralCode");
     } catch (e) {
-      errorEl.textContent = e.message || "Could not register.";
+      errorEl.textContent = AppErrors.fromCaught("register", e, "Could not register.");
     }
   });
 
@@ -307,12 +308,15 @@
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, device_label: "Web affiliate dashboard" }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Login failed.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        errorEl.textContent = AppErrors.friendly("login", null, data.detail, "Login failed.");
+        return;
+      }
       setTokens(data.access_token, data.refresh_token);
       showDashboardScreen();
     } catch (e) {
-      errorEl.textContent = e.message || "Could not log in.";
+      errorEl.textContent = AppErrors.friendly("login", e);
     }
   });
 
@@ -355,7 +359,11 @@
         document.getElementById("withdrawSub").textContent =
           `Available: ${fmtMoney(d.available_for_withdrawal_usd)} — minimum withdrawal is ${fmtMoney(d.min_withdrawal_usd)}.`;
       }
-    } catch (e) { /* api() already redirects to login on auth failure */ }
+    } catch (e) {
+      // api() already redirects to login on auth failure — nothing else
+      // to show the user here, but still worth a console trace.
+      console.error("[dashboard] affiliate summary failed to load:", e);
+    }
 
     try {
       const c = await api("/accounts/affiliate/commissions");
@@ -369,7 +377,9 @@
           `<td><span class="badge ${esc(row.status)}">${esc(row.status)}</span></td>`;
         tbody.appendChild(tr);
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error("[dashboard] commissions list failed to load:", e);
+    }
 
     try {
       const w = await api("/accounts/affiliate/withdrawals");
@@ -382,7 +392,9 @@
           `<td>${esc(row.method)}</td><td><span class="badge ${esc(row.status)}">${esc(row.status)}</span></td>`;
         tbody.appendChild(tr);
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error("[dashboard] withdrawals list failed to load:", e);
+    }
   }
 
   document.getElementById("copyLinkBtn").addEventListener("click", () => {
@@ -414,7 +426,7 @@
       document.getElementById("withdrawDestination").value = "";
       loadDashboard();
     } catch (e) {
-      errorEl.textContent = e.message || "Could not request withdrawal.";
+      errorEl.textContent = AppErrors.fromCaught("withdrawal_request", e, "Could not request withdrawal.");
     }
   });
 

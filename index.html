@@ -263,6 +263,73 @@
     0%, 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0.4); }
     50% { box-shadow: 0 0 0 6px rgba(79,140,255,0); }
   }
+
+  /* ---------- How to use: video cards ---------- */
+  .video-card { padding: 0; overflow: hidden; }
+  .video-card-body { padding: 14px 18px 16px; }
+  .video-card-title {
+    font-weight: 700; font-size: 15px;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  }
+  .video-card-duration { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .video-card-desc { color: var(--muted); font-size: 13px; margin-top: 4px; line-height: 1.45; }
+  .video-frame {
+    position: relative; width: 100%; padding-top: 56.25%;
+    background: linear-gradient(135deg, rgba(79,140,255,0.12), rgba(123,92,255,0.12));
+    overflow: hidden;
+  }
+  .video-frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+  .video-play-btn {
+    position: absolute; inset: 0; width: 100%; display: flex; align-items: center; justify-content: center;
+    background: rgba(10,11,15,0.3); border: none; padding: 0; margin: 0; cursor: pointer; border-radius: 0;
+  }
+  .video-play-btn .play-circle {
+    width: 54px; height: 54px; border-radius: 50%;
+    background: rgba(255,255,255,0.14); border: 1.5px solid rgba(255,255,255,0.55);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .video-play-btn:hover .play-circle, .video-play-btn:active .play-circle {
+    transform: scale(1.08); background: rgba(79,140,255,0.4);
+  }
+  .video-play-btn svg { width: 18px; height: 18px; fill: #fff; margin-left: 3px; }
+  .video-state {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; text-align: center; padding: 0 22px; color: var(--muted); font-size: 12.5px; line-height: 1.4;
+  }
+  .video-state .video-state-icon { font-size: 20px; opacity: 0.75; }
+  .video-spinner {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2.5px solid rgba(255,255,255,0.18); border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- generic skeleton loading state ---------- */
+  .skeleton-line {
+    height: 14px; border-radius: 6px; margin-bottom: 8px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 37%, rgba(255,255,255,0.05) 63%);
+    background-size: 400% 100%; animation: skeletonShine 1.4s ease infinite;
+  }
+  .skeleton-line.short { width: 60%; }
+  @keyframes skeletonShine { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-line { animation: none; background: rgba(255,255,255,0.08); }
+    .video-spinner { animation: none; border-top-color: rgba(255,255,255,0.4); }
+  }
+
+  /* ---------- connection status banner (subtle — most blips self-resolve
+     in a second or two, this should never feel as loud as an actual
+     outage) ---------- */
+  #wsStatusBanner {
+    display: none; position: sticky; top: 0; z-index: 5; margin: -24px -20px 16px;
+    background: rgba(227,178,60,0.14); color: var(--amber);
+    border-bottom: 1px solid rgba(227,178,60,0.3);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    padding: 8px 20px; font-size: 12.5px; text-align: center;
+  }
+  #wsStatusBanner.showing { display: block; }
 </style>
 </head>
 <body>
@@ -298,6 +365,7 @@
 
   <div id="updateBanner" class="update-banner">A new version is available — tap to update</div>
   <div id="siteNoticeBanner" class="hidden" style="background:var(--amber);color:#1a1a1a;padding:10px 20px;font-size:13px;text-align:center;margin:-24px -20px 20px;font-weight:600"></div>
+  <div id="wsStatusBanner"></div>
 
   <div id="installBanner" class="install-banner">
     <span class="install-icon">📲</span>
@@ -472,34 +540,15 @@
   <div id="howToScreen" class="hidden">
     <div class="sub"><button class="link" style="display:inline;padding:0" id="backFromHowToBtn">← Back</button></div>
     <h2 style="margin:10px 0 4px">How to use</h2>
-    <div class="sub" style="margin-bottom:16px">A few short videos to get you started.</div>
+    <div class="sub" style="margin-bottom:16px">Short videos covering everything from your first signal to getting paid as an affiliate.</div>
 
-    <div class="card">
-      <div style="font-weight:700;margin-bottom:8px">1. How to generate a signal</div>
-      <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden">
-        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;inset:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe>
-      </div>
-    </div>
-    <div class="card">
-      <div style="font-weight:700;margin-bottom:8px">2. How to buy a subscription</div>
-      <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden">
-        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;inset:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe>
-      </div>
-    </div>
-    <div class="card">
-      <div style="font-weight:700;margin-bottom:8px">3. How to trade</div>
-      <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden">
-        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;inset:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe>
-      </div>
-    </div>
-    <div class="card">
-      <div style="font-weight:700;margin-bottom:8px">4. FAQ</div>
-      <div style="position:relative;padding-top:56.25%;border-radius:10px;overflow:hidden">
-        <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;inset:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe>
-      </div>
-    </div>
-    <!-- Placeholder links — swap the video IDs above (the part after
-         /embed/) for your real uploads whenever they're ready. -->
+    <!-- Cards are rendered by renderHowToVideos() from the HOW_TO_VIDEOS
+         list below, one per topic — see clients/web/videos/README.md for
+         exactly which local file each card expects. Nothing here is a
+         random/stock video: every card either plays a real local asset
+         once one exists at that path, or shows an honest "coming soon"
+         state — it never falls back to an unrelated placeholder video. -->
+    <div id="howToVideoGrid"></div>
   </div>
 
   <!-- ===== AI SUPPORT CHAT WIDGET ===== -->
@@ -516,6 +565,7 @@
 
 <script src="./state.js"></script>
 <script src="./ws.js"></script>
+<script src="./errors.js"></script>
 <script>
   // Render gives you ONE fixed URL for the life of the service — no more
   // tunnel URLs that change on every restart, no more patch-and-redeploy
@@ -714,6 +764,7 @@
     initInstallPrompt();
     initModeTabs();
     initHowTo();
+    initWsStatusBanner();
     const savedKey = getSavedLicenseKey();
     if (savedKey) {
       showScreen("signalCenterScreen");
@@ -750,6 +801,39 @@
     wsClient.connect();
     wsClient.setRoom("premium");
     window.wsClient = wsClient;
+  }
+
+  // ws.js writes "disconnected" | "connecting" | "open" | "closed" into
+  // AppState as the connection changes — this just turns that into the
+  // one small, calm status line Task C asked for, instead of leaving it
+  // silent. Deliberately says nothing during the very first connection
+  // attempt on page load: "connecting" is completely normal at that
+  // point, not a disconnect, and flashing a banner on every fresh visit
+  // would just be noise. Only once we've been open at least once does a
+  // drop back to "connecting"/"closed" count as something worth telling
+  // the user about.
+  let wsHasConnectedOnce = false;
+  function initWsStatusBanner() {
+    const banner = document.getElementById("wsStatusBanner");
+    if (!banner) return;
+    AppState.subscribe("websocket.status", (status) => {
+      if (status === "open") {
+        wsHasConnectedOnce = true;
+        banner.classList.remove("showing");
+        return;
+      }
+      if (!wsHasConnectedOnce) {
+        banner.classList.remove("showing");
+        return;
+      }
+      if (status === "connecting") {
+        banner.textContent = AppErrors.MESSAGES.ws_reconnecting;
+        banner.classList.add("showing");
+      } else if (status === "closed" || status === "disconnected") {
+        banner.textContent = AppErrors.MESSAGES.ws_disconnected;
+        banner.classList.add("showing");
+      }
+    });
   }
 
   // ---------- Signal Center: dashboard status card ----------
@@ -797,7 +881,10 @@
       }
     } catch (e) {
       // Status card is supplementary — a failed fetch shouldn't block
-      // the actual signal-generation flow below it.
+      // the actual signal-generation flow below it, so this stays
+      // silent on screen by design. Still logged so a real recurring
+      // failure here is debuggable instead of invisible.
+      console.error("[dashboard] status card refresh failed:", e);
     }
   }
 
@@ -915,8 +1002,146 @@
     }
   }
 
+  // ---------- How To Use: professional video-card system ----------
+  // Each entry names a local file under ./videos/ (see
+  // clients/web/videos/README.md) — never an external/stock URL. A card
+  // whose file doesn't exist yet (true right now, for all six) shows an
+  // honest "Video coming soon" state instead of a broken player; drop a
+  // matching file in ./videos/ later and the same card starts playing it
+  // with no code changes. durationLabel is optional — omit it (as every
+  // entry does today) until a real video with a known length exists.
+  const HOW_TO_VIDEOS = [
+    {
+      id: "getting-started",
+      title: "Getting Started",
+      description: "Adding your license key, signing in, and a quick tour of the dashboard.",
+      src: "./videos/getting-started.mp4",
+    },
+    {
+      id: "how-signals-work",
+      title: "How Signals Work",
+      description: "What the engine checks behind the scenes and how it turns that into a call.",
+      src: "./videos/how-signals-work.mp4",
+    },
+    {
+      id: "how-to-read-a-signal",
+      title: "How to Read a Signal",
+      description: "Understanding BUY / SELL / WAIT, the confidence percentage, and the volatility badge.",
+      src: "./videos/how-to-read-a-signal.mp4",
+    },
+    {
+      id: "how-to-use-the-platform",
+      title: "How to Use the Platform",
+      description: "Choosing an asset and duration, and using Premium Signal alerts.",
+      src: "./videos/how-to-use-the-platform.mp4",
+    },
+    {
+      id: "how-to-manage-your-subscription",
+      title: "How to Manage Your Subscription",
+      description: "Checking your plan status, renewing, and what happens while a payment is reviewed.",
+      src: "./videos/how-to-manage-your-subscription.mp4",
+    },
+    {
+      id: "how-referral-links-work",
+      title: "How Referral/Affiliate Links Work",
+      description: "Sharing your link, tracking clicks and signups, and requesting a payout.",
+      src: "./videos/how-referral-links-work.mp4",
+    },
+  ];
+
+  const PLAY_ICON_SVG = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z"/></svg>';
+
+  function renderHowToVideos() {
+    const grid = document.getElementById("howToVideoGrid");
+    grid.innerHTML = HOW_TO_VIDEOS.map((v, i) => `
+      <div class="card video-card">
+        <div class="video-frame" id="videoFrame-${v.id}" data-state="idle">
+          <button class="video-play-btn" id="videoPlayBtn-${v.id}" aria-label="Play: ${v.title}">
+            <span class="play-circle">${PLAY_ICON_SVG}</span>
+          </button>
+        </div>
+        <div class="video-card-body">
+          <div class="video-card-title">
+            <span>${i + 1}. ${v.title}</span>
+            ${v.durationLabel ? `<span class="video-card-duration">${v.durationLabel}</span>` : ""}
+          </div>
+          <div class="video-card-desc">${v.description}</div>
+        </div>
+      </div>
+    `).join("");
+
+    HOW_TO_VIDEOS.forEach(initVideoCard);
+  }
+
+  // Per-card state machine: idle (poster + play button) -> loading
+  // (spinner, video element attached and fetching) -> playing (native
+  // controls take over), or idle -> error ("coming soon", clicking again
+  // retries — harmless since a since-added real file would then load
+  // normally).
+  function initVideoCard(v) {
+    const frame = document.getElementById(`videoFrame-${v.id}`);
+    const playBtn = document.getElementById(`videoPlayBtn-${v.id}`);
+    if (!frame || !playBtn) return;
+
+    function setState(state, extraHtml) {
+      frame.dataset.state = state;
+      if (state === "idle") {
+        frame.innerHTML = `
+          <button class="video-play-btn" id="videoPlayBtn-${v.id}" aria-label="Play: ${v.title}">
+            <span class="play-circle">${PLAY_ICON_SVG}</span>
+          </button>`;
+        document.getElementById(`videoPlayBtn-${v.id}`).addEventListener("click", () => startPlayback());
+      } else if (state === "loading") {
+        frame.innerHTML = `<div class="video-state"><div class="video-spinner"></div><span>Loading video…</span></div>`;
+      } else if (state === "error") {
+        frame.innerHTML = `
+          <div class="video-state">
+            <span class="video-state-icon">🎬</span>
+            <span>Video coming soon</span>
+          </div>`;
+      } else if (state === "playing") {
+        frame.innerHTML = extraHtml;
+      }
+    }
+
+    function startPlayback() {
+      setState("loading");
+      const videoEl = document.createElement("video");
+      videoEl.controls = true;
+      videoEl.autoplay = true;
+      videoEl.playsInline = true; // required for autoplay-on-tap to work on iOS Safari rather than forcing fullscreen
+      videoEl.setAttribute("aria-label", v.title);
+
+      const sources = [v.src.replace(/\.mp4$/, ".webm"), v.src]
+        .map((src) => `<source src="${src}" type="video/${src.endsWith(".webm") ? "webm" : "mp4"}">`)
+        .join("");
+      videoEl.innerHTML = sources;
+
+      videoEl.addEventListener("canplay", () => {
+        if (frame.dataset.state !== "loading") return; // a fast error already fired for this same attempt — don't fight it
+        frame.dataset.state = "playing";
+        frame.innerHTML = "";
+        frame.appendChild(videoEl);
+        videoEl.play().catch(() => {}); // autoplay can still be blocked by the browser even with a user gesture in rare cases — controls are already visible either way
+      }, { once: true });
+
+      videoEl.addEventListener("error", () => {
+        console.error(`[how-to-video] "${v.id}" failed to load (expected at ${v.src} — see clients/web/videos/README.md)`);
+        setState("error");
+      }, { once: true });
+
+      // Not yet attached to the DOM — this is what actually triggers the
+      // browser to start the network request that the listeners above
+      // are waiting on.
+      videoEl.load();
+    }
+
+    setState("idle");
+  }
+
   // ---------- How To Use ----------
   function initHowTo() {
+    renderHowToVideos();
     document.getElementById("howToBtn").addEventListener("click", () => showScreen("howToScreen"));
     document.getElementById("backFromHowToBtn").addEventListener("click", () => showScreen("signalCenterScreen"));
   }
@@ -963,8 +1188,12 @@
 
   async function loadPlanTiers() {
     const container = document.getElementById("planTierOptions");
+    container.innerHTML = `
+      <div class="skeleton-line" style="width:80%"></div>
+      <div class="skeleton-line short"></div>`;
     try {
       const res = await fetch(`${BACKEND_URL}/accounts/plans`);
+      if (!res.ok) throw new Error(`status ${res.status}`);
       PLAN_CATALOG = await res.json();
       container.innerHTML = "";
       PLAN_CATALOG.forEach((plan, i) => {
@@ -985,7 +1214,11 @@
         updateDurationPrices();
       }
     } catch (e) {
-      container.innerHTML = "<div class='error'>Couldn't load plans — check BACKEND_URL / that the server is running.</div>";
+      container.innerHTML = "";
+      const errDiv = document.createElement("div");
+      errDiv.className = "error";
+      errDiv.textContent = AppErrors.friendly("plans", e);
+      container.appendChild(errDiv);
     }
   }
 
@@ -993,6 +1226,7 @@
     const el = document.getElementById("paymentInstructions");
     try {
       const res = await fetch(`${BACKEND_URL}/payment/settings`);
+      if (!res.ok) throw new Error(`status ${res.status}`);
       const s = await res.json();
       let html = `${s.instructions}<br>`;
       if (s.jazzcash_number) {
@@ -1008,7 +1242,7 @@
       if (s.support_contact) document.getElementById("supportContactText").textContent = s.support_contact;
       if (s.telegram_link) document.getElementById("telegramLink").href = s.telegram_link;
     } catch (e) {
-      el.textContent = "Couldn't load payment details — check BACKEND_URL / that the server is running.";
+      el.textContent = AppErrors.friendly("payment_settings", e);
     }
   }
 
@@ -1054,8 +1288,11 @@
         method: "POST",
         body: formData,  // no Content-Type header — browser sets the correct multipart boundary itself
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Submission failed.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        errorEl.textContent = AppErrors.friendly("payment_submit", null, data.detail);
+        return;
+      }
       successEl.textContent = `${data.message} Your request ID is ${data.request_id} — save it to check your status below.`;
       document.getElementById("payName").value = "";
       document.getElementById("payContact").value = "";
@@ -1064,7 +1301,7 @@
       document.getElementById("statusRequestId").value = data.request_id;
       document.getElementById("statusContact").value = contact;
     } catch (e) {
-      errorEl.textContent = e.message || "Could not submit. Try again.";
+      errorEl.textContent = AppErrors.friendly("payment_submit", e);
     }
   });
 
@@ -1082,8 +1319,11 @@
 
     try {
       const res = await fetch(`${BACKEND_URL}/payment/status/${encodeURIComponent(requestId)}?contact=${encodeURIComponent(contact)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Couldn't find that request.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        statusErrorEl.textContent = AppErrors.friendly("payment_status", null, data.detail, "Couldn't find that request — double check the request ID and contact info you submitted.");
+        return;
+      }
       const statusLabels = {
         pending: "⏳ Pending review",
         approved: "✅ Approved — check your contact info for your key",
@@ -1092,7 +1332,7 @@
       };
       statusResultEl.textContent = statusLabels[data.status] || data.status;
     } catch (e) {
-      statusErrorEl.textContent = e.message || "Could not check status. Try again.";
+      statusErrorEl.textContent = AppErrors.friendly("payment_status", e);
     }
   });
 
@@ -1114,8 +1354,9 @@
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (errorEl) errorEl.textContent = data.detail || "That key isn't valid.";
-        else alert(data.detail || "That key isn't valid.");
+        const msg = AppErrors.friendly("license_check", null, data.detail, "That key isn't valid.");
+        if (errorEl) errorEl.textContent = msg;
+        else alert(msg);
         return;
       }
       // Only persist and show the dashboard once the backend has actually
@@ -1131,8 +1372,9 @@
       // dead backend) would still show the dashboard; actual signal
       // generation was the only real check. Now the login step itself
       // requires a reachable, valid backend.
-      if (errorEl) errorEl.textContent = "Could not reach the backend to verify your key. Is it running?";
-      else alert("Could not reach the backend to verify your key. Is it running?");
+      const msg = AppErrors.friendly("license_check", e);
+      if (errorEl) errorEl.textContent = msg;
+      else alert(msg);
     } finally {
       btn.disabled = false;
       btn.textContent = originalText;
@@ -1155,14 +1397,13 @@
       // Fetch/CORS failure — fall back to the 4 configured pairs (config.yaml's
       // tracked_assets) so the dropdown still shows all of them instead of
       // collapsing to one, and flag that this is a fallback, not live data.
-      console.error("[assets] falling back to static list:", e);
       const FALLBACK_ASSETS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD"];
       select.innerHTML = FALLBACK_ASSETS
         .map(a => `<option value="${a}">${a.slice(0,3)}/${a.slice(3)}</option>`)
         .join("");
       const errorEl = document.getElementById("genError");
       if (errorEl) {
-        errorEl.textContent = "Couldn't reach the backend to confirm live assets — showing the configured list. Check BACKEND_URL / that the server is running.";
+        errorEl.textContent = AppErrors.friendly("assets", e);
       }
     }
   }
@@ -1269,7 +1510,7 @@
         return;
       }
       if (!res.ok) {
-        errorEl.textContent = data.detail || "Request failed.";
+        errorEl.textContent = AppErrors.friendly("signals", null, data.detail, "We couldn't generate a signal right now. Please try again.");
         if (res.status === 401 || res.status === 403) {
           // key was rejected (expired/revoked/invalid) — send them back
           errorEl.textContent += " Your key may have expired — please re-enter it.";
@@ -1320,7 +1561,7 @@
       }
     } catch (e) {
       if (AppState.isCurrent("generateSignal", token)) {
-        errorEl.textContent = "Could not reach backend. Is it running?";
+        errorEl.textContent = AppErrors.friendly("signals", e);
       }
     } finally {
       // Guard here too: a slow, now-superseded request finishing after a
@@ -1348,7 +1589,10 @@
         banner.classList.add("hidden");
       }
     } catch (e) {
-      // silently fail — a missing notice shouldn't block the app from working
+      // silently fail — a missing notice shouldn't block the app from
+      // working — but still log it, same reasoning as loadDashboard()'s
+      // catch above.
+      console.error("[notice] failed to load site notice:", e);
     }
   }
   loadSiteNotice();
@@ -1428,12 +1672,12 @@
           signal_context: AppState.get("chat.lastSignalContext"),
         }),
       });
-      const data = await res.json();
-      const reply = res.ok ? data.reply : (data.detail || "Something went wrong.");
+      const data = await res.json().catch(() => ({}));
+      const reply = res.ok ? data.reply : AppErrors.friendly("support_chat", null, data.detail);
       addChatMessage(reply, false);
       if (res.ok) AppState.set("chat.history", AppState.get("chat.history").concat([{ role: "model", text: reply }]));
     } catch (e) {
-      addChatMessage("Could not reach support chat right now.", false);
+      addChatMessage(AppErrors.friendly("support_chat", e), false);
     }
   }
 
