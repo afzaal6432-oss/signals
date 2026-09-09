@@ -3,14 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f1115">
+<meta name="theme-color" content="#0a0b10">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
 <title>Quotex Signal Generator</title>
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --border: #262b36; --text: #e8eaed;
-    --muted: #8b92a4; --accent: #4f8cff; --green: #35c46a; --red: #ff5a5a; --amber: #e3b23c;
+    /* PRECISION HUD PALETTE — leans into the targeting-reticle motif this
+       page already uses (the grid overlay + "target acquired" corner
+       flash below) rather than a generic SaaS blue. Cyan reads as an
+       instrument/targeting color (heads-up-display, radar, sonar) and
+       stays clear of green/red/amber, which are load-bearing signal
+       meanings (BUY/SELL/WAIT) and are never touched here. */
+    --bg: #0a0b10; --panel: #161822; --border: #2a2f3d; --text: #edf0f5;
+    --muted: #8791a8; --accent: #22d3ee; --accent-2: #7b5cff;
+    --green: #2fd180; --red: #ff4d6a; --amber: #f5b942;
+    --font-display: "Space Grotesk", -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -20,8 +31,8 @@
     background: var(--bg);
     background-size: cover; background-position: center;
   }
-  #bgLayer.theme-nebula { background-image: linear-gradient(-45deg, #0f1115, #1a1440, #0f1115, #142238); background-size: 400% 400%; animation: bgShift 18s ease infinite; }
-  #bgLayer.theme-market { background-image: linear-gradient(-45deg, #0f1115, #103a2b, #0f1115, #0f2a3a); background-size: 400% 400%; animation: bgShift 18s ease infinite; }
+  #bgLayer.theme-nebula { background-image: linear-gradient(-45deg, #0a0b10, #1a1440, #0a0b10, #142238); background-size: 400% 400%; animation: bgShift 18s ease infinite; }
+  #bgLayer.theme-market { background-image: linear-gradient(-45deg, #0a0b10, #103a2b, #0a0b10, #0f2a3a); background-size: 400% 400%; animation: bgShift 18s ease infinite; }
   #bgLayer.theme-ember  { background-image: linear-gradient(-45deg, #150f0f, #3a1414, #150f0f, #331a0a); background-size: 400% 400%; animation: bgShift 18s ease infinite; }
   #bgLayer.theme-mono   { background: var(--bg); }
   #bgLayer.theme-custom { animation: none; }
@@ -94,8 +105,8 @@
   @media (prefers-reduced-motion: reduce) {
     .ticker-track { animation: none; padding-left: 12px; }
   }
-  h1 { font-size: 19px; margin: 8px 0 20px; }
-  h2 { font-size: 16px; margin: 0 0 4px; }
+  h1 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin: 8px 0 20px; letter-spacing: 0.01em; }
+  h2 { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin: 0 0 4px; }
   .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
   label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; }
   select, input, textarea, button {
@@ -114,17 +125,18 @@
     padding: 10px 0; cursor: pointer; text-decoration: underline;
   }
   .card {
-    background: rgba(23, 26, 33, 0.6); border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(22, 24, 34, 0.6); border: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid rgba(34,211,238,0.18);
     border-radius: 14px; padding: 18px; margin-bottom: 16px;
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
   }
   .plan-option {
     display: flex; justify-content: space-between; align-items: center;
     padding: 12px; border: 1px solid var(--border); border-radius: 10px;
     margin-bottom: 8px; cursor: pointer;
   }
-  .plan-option.selected { border-color: var(--accent); background: rgba(79,140,255,0.08); }
+  .plan-option.selected { border-color: var(--accent); background: rgba(34,211,238,0.08); }
   .plan-option input[type="radio"] { width: auto; margin-right: 10px; }
 
   /* ---------- Signal Center (new post-login home) ---------- */
@@ -133,7 +145,7 @@
   }
   .status-item { text-align: center; padding: 8px 4px; }
   .status-item .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .status-item .value { font-size: 17px; font-weight: 700; margin-top: 4px; }
+  .status-item .value { font-family: var(--font-display); font-size: 17px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
   @media (min-width: 480px) { .status-card { grid-template-columns: repeat(3, 1fr); } }
 
   .mode-tabs { display: flex; gap: 8px; margin: 18px 0 4px; }
@@ -143,17 +155,17 @@
     color: var(--muted); font-weight: 700; font-size: 14.5px; cursor: pointer;
     transition: all 0.15s ease;
   }
-  .mode-tab.active { border-color: var(--accent); background: rgba(79,140,255,0.12); color: #fff; }
+  .mode-tab.active { border-color: var(--accent); background: rgba(34,211,238,0.12); color: #fff; }
 
   /* Beginner-mode: the generate button is the single biggest, most
      obvious thing on the whole screen — no scrolling, no ambiguity
      about what to press. */
   button.giant-primary {
     display: block; width: 100%; margin-top: 22px; padding: 26px 16px;
-    font-size: 22px; font-weight: 800; letter-spacing: 0.01em;
-    background: linear-gradient(135deg, var(--accent), #7b5cff);
+    font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: 0.01em;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border: none; border-radius: 18px; color: #fff; cursor: pointer;
-    box-shadow: 0 8px 30px rgba(79,140,255,0.35);
+    box-shadow: 0 8px 30px rgba(34,211,238,0.35), 0 2px 8px rgba(123,92,255,0.25);
     transition: transform 0.1s ease;
   }
   button.giant-primary:active { transform: scale(0.98); }
@@ -168,8 +180,8 @@
     margin: 0 auto 16px; animation: watchPulse 1.6s ease-in-out infinite;
   }
   @keyframes watchPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0.6); }
-    50% { box-shadow: 0 0 0 14px rgba(79,140,255,0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34,211,238,0.6); }
+    50% { box-shadow: 0 0 0 14px rgba(34,211,238,0); }
   }
   .premium-reveal {
     text-align: center; padding: 26px 18px; border-radius: 18px;
@@ -178,7 +190,7 @@
   .premium-reveal.BUY { background: rgba(53,196,106,0.14); border: 1px solid var(--green); }
   .premium-reveal.SELL { background: rgba(255,90,90,0.14); border: 1px solid var(--red); }
   @keyframes revealPop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .premium-reveal .direction { font-size: 44px; font-weight: 900; letter-spacing: 0.02em; }
+  .premium-reveal .direction { font-family: var(--font-display); font-size: 44px; font-weight: 800; letter-spacing: 0.02em; }
   .premium-reveal.BUY .direction { color: var(--green); }
   .premium-reveal.SELL .direction { color: var(--red); }
   .premium-flash { animation: screenFlash 0.5s ease; }
@@ -212,13 +224,18 @@
     60% { opacity: 1; transform: scale(1); }
     100% { opacity: 0.5; transform: scale(1); }
   }
-  .signal-label { font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
+  .signal-label { font-family: var(--font-display); font-size: 28px; font-weight: 800; letter-spacing: 0.02em; }
   .BUY .signal-label { color: var(--green); }
   .SELL .signal-label { color: var(--red); }
   .WAIT .signal-label { color: var(--amber); }
   .confidence { margin-top: 4px; font-size: 14px; }
   .confidence-tier { font-weight: 600; }
-  .confidence-pct { color: var(--muted); font-size: 12.5px; margin-left: 4px; }
+  .confidence-pct { color: var(--muted); font-size: 12.5px; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .quality-score-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .quality-score-label { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  .quality-score-track { flex: 1; height: 6px; border-radius: 3px; background: var(--border, rgba(255,255,255,0.1)); overflow: hidden; }
+  .quality-score-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+  .quality-score-value { font-family: var(--font-display); font-size: 13px; font-weight: 700; white-space: nowrap; min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
   .explanation { margin-top: 12px; font-size: 14px; line-height: 1.4; }
   .timewindow {
     margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
@@ -260,8 +277,8 @@
     animation: loginPulse 2.5s ease-in-out infinite;
   }
   @keyframes loginPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0.4); }
-    50% { box-shadow: 0 0 0 6px rgba(79,140,255,0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34,211,238,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(34,211,238,0); }
   }
 
   /* ---------- How to use: video cards ---------- */
@@ -275,7 +292,7 @@
   .video-card-desc { color: var(--muted); font-size: 13px; margin-top: 4px; line-height: 1.45; }
   .video-frame {
     position: relative; width: 100%; padding-top: 56.25%;
-    background: linear-gradient(135deg, rgba(79,140,255,0.12), rgba(123,92,255,0.12));
+    background: linear-gradient(135deg, rgba(34,211,238,0.12), rgba(123,92,255,0.12));
     overflow: hidden;
   }
   .video-frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
@@ -291,7 +308,7 @@
     transition: transform 0.15s ease, background 0.15s ease;
   }
   .video-play-btn:hover .play-circle, .video-play-btn:active .play-circle {
-    transform: scale(1.08); background: rgba(79,140,255,0.4);
+    transform: scale(1.08); background: rgba(34,211,238,0.4);
   }
   .video-play-btn svg { width: 18px; height: 18px; fill: #fff; margin-left: 3px; }
   .video-state {
@@ -356,7 +373,7 @@
       <button class="theme-swatch" data-theme="nebula" style="width:auto;flex:1;min-width:70px;background:linear-gradient(-45deg,#1a1440,#142238)">Nebula</button>
       <button class="theme-swatch" data-theme="market" style="width:auto;flex:1;min-width:70px;background:linear-gradient(-45deg,#103a2b,#0f2a3a)">Market</button>
       <button class="theme-swatch" data-theme="ember" style="width:auto;flex:1;min-width:70px;background:linear-gradient(-45deg,#3a1414,#331a0a)">Ember</button>
-      <button class="theme-swatch" data-theme="mono" style="width:auto;flex:1;min-width:70px;background:#0f1115">Plain</button>
+      <button class="theme-swatch" data-theme="mono" style="width:auto;flex:1;min-width:70px;background:#0a0b10">Plain</button>
     </div>
     <label for="customBgUpload">Or upload your own image</label>
     <input type="file" id="customBgUpload" accept="image/*">
@@ -499,6 +516,9 @@
 
       <label>Asset</label>
       <select id="asset"><option>Loading...</option></select>
+      <div id="assetLoadingHint" class="sub" style="display:none;margin-top:-4px;margin-bottom:8px">
+        ⏳ Waking up the server — first request of the day can take up to 50 seconds…
+      </div>
 
       <label>Timeframe</label>
       <!-- Only 1 minute and 5 minutes are offered — these are the only
@@ -612,7 +632,73 @@
     return token;
   }
 
-  // ---------- license key persistence (this was the bug — now fixed) ----------
+  // ---------- UX helpers: Enter-to-submit + honest "still working" loading feedback ----------
+  //
+  // WHY THIS EXISTS: two related complaints this addresses directly —
+  // (1) text inputs across the app (license key, payment forms, status
+  //     check) only submitted via mouse/tap click on their button, with
+  //     no Enter-key support — a standard, expected affordance for any
+  //     single-line form field.
+  // (2) the app's own backend can take 40-50s to respond on the first
+  //     request of the day (Render free-tier cold start — see the note
+  //     on the license screen). Every long-running button already
+  //     disables itself and swaps its label to "Checking..."/
+  //     "Generating..." while waiting, but that label never changes
+  //     again for the whole wait — on a slow connection or a cold
+  //     start, that reads as "stuck" or "not doing anything" rather
+  //     than "still working," which is what actually prompted this.
+  //     attachSlowLoadingHint() escalates the button's own label after
+  //     a few seconds to explicitly say the server may be waking up,
+  //     so a long wait reads as progress, not a freeze.
+
+  // Enter (without Shift, so multi-line textareas still get real
+  // newlines) on any of `inputEls` triggers `onSubmit`. Safe to call
+  // from any input's own composing state (IME) — checks
+  // e.isComposing so committing Japanese/Chinese/Korean input with
+  // Enter doesn't accidentally submit the form.
+  function attachEnterToSubmit(inputEls, onSubmit) {
+    (Array.isArray(inputEls) ? inputEls : [inputEls]).forEach((el) => {
+      if (!el) return;
+      el.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" || e.shiftKey || e.isComposing) return;
+        e.preventDefault();
+        onSubmit();
+      });
+    });
+  }
+
+  // Wraps a button's existing loading-label pattern (btn.textContent =
+  // "Checking..." etc., set by the caller BEFORE calling this) with a
+  // delayed escalation to a longer, honest explanation. Returns a
+  // cleanup function — call it in the same `finally` block that
+  // restores the button's original text, so a fast response never
+  // shows the slow-path message at all.
+  function attachSlowLoadingHint(btn, slowText, delayMs = 6000) {
+    const timer = setTimeout(() => {
+      if (btn) btn.textContent = slowText;
+    }, delayMs);
+    return () => clearTimeout(timer);
+  }
+
+  // PHASE 1I — a richer version of the same idea for the one action
+  // that most benefits from it (signal generation): a short SEQUENCE of
+  // stage labels, each timed to roughly track a real phase of the
+  // actual backend pipeline (connect → fetch fresh data → analyze →
+  // confirm indicators → generate), rather than one flat "Generating..."
+  // the whole time. This does NOT fabricate work or hide latency — the
+  // backend does exactly the same work in exactly the same time either
+  // way; this only paces what the WAITING user sees, and never shows a
+  // stage the request has already moved past if the response comes back
+  // first (every timer is cancelled together in one cleanup call).
+  // `stages` is an array of {text, afterMs} in ascending afterMs order.
+  function attachStagedLoadingHint(btn, stages) {
+    const timers = stages.map(({ text, afterMs }) =>
+      setTimeout(() => { if (btn) btn.textContent = text; }, afterMs)
+    );
+    return () => timers.forEach(clearTimeout);
+  }
+
+
   function getSavedLicenseKey() {
     return AppState.get("user.licenseKey") || "";
   }
@@ -1304,6 +1390,10 @@
       errorEl.textContent = AppErrors.friendly("payment_submit", e);
     }
   });
+  attachEnterToSubmit(
+    [document.getElementById("payName"), document.getElementById("payContact"), document.getElementById("payEmail")],
+    () => document.getElementById("submitPaymentBtn").click()
+  );
 
   document.getElementById("checkStatusBtn").addEventListener("click", async () => {
     const statusErrorEl = document.getElementById("statusError");
@@ -1335,6 +1425,10 @@
       statusErrorEl.textContent = AppErrors.friendly("payment_status", e);
     }
   });
+  attachEnterToSubmit(
+    [document.getElementById("statusRequestId"), document.getElementById("statusContact")],
+    () => document.getElementById("checkStatusBtn").click()
+  );
 
   document.getElementById("saveLicenseBtn").addEventListener("click", async () => {
     const key = document.getElementById("licenseKey").value.trim();
@@ -1346,6 +1440,9 @@
     btn.disabled = true;
     const originalText = btn.textContent;
     btn.textContent = "Checking...";
+    const stopSlowHint = attachSlowLoadingHint(
+      btn, "Still checking — first request of the day can take up to 50s while the server wakes up…"
+    );
     try {
       const res = await fetch(`${BACKEND_URL}/license/check`, {
         method: "POST",
@@ -1376,13 +1473,26 @@
       if (errorEl) errorEl.textContent = msg;
       else alert(msg);
     } finally {
+      stopSlowHint();
       btn.disabled = false;
       btn.textContent = originalText;
     }
   });
+  attachEnterToSubmit(document.getElementById("licenseKey"), () => document.getElementById("saveLicenseBtn").click());
 
   async function loadAssets() {
     const select = document.getElementById("asset");
+    const hintEl = document.getElementById("assetLoadingHint");
+    // Immediate, honest loading state — replaces the previous silent
+    // gap where the select just sat on its static "Loading..." markup
+    // (or, on a repeat call, whatever list was already there) with no
+    // indication a fetch was actually in flight. If it's still going
+    // after a few seconds, hintEl explains why (cold-start backend)
+    // instead of leaving the user guessing whether anything is
+    // happening at all.
+    select.disabled = true;
+    select.innerHTML = `<option>Loading markets…</option>`;
+    const hintTimer = setTimeout(() => { if (hintEl) hintEl.style.display = "block"; }, 6000);
     try {
       const res = await fetch(`${BACKEND_URL}/assets`);
       if (!res.ok) throw new Error(`Backend returned ${res.status}`);
@@ -1405,6 +1515,10 @@
       if (errorEl) {
         errorEl.textContent = AppErrors.friendly("assets", e);
       }
+    } finally {
+      clearTimeout(hintTimer);
+      if (hintEl) hintEl.style.display = "none";
+      select.disabled = false;
     }
   }
 
@@ -1469,6 +1583,19 @@
     return { label: "Very weak agreement", color: "var(--red)" };
   }
 
+  function qualityTier(score) {
+    // Distinct from confidenceTier — quality_score is a deliberately
+    // harsher, "how much should you actually trust this" number (see
+    // app/signals/scoring.py's compute_signal_quality_score), so its
+    // own bands sit a little lower than confidence's for the same
+    // color, reflecting that a "high" quality score is a stronger,
+    // rarer claim than a "high" confidence one.
+    if (score >= 70) return { label: "High trust", color: "var(--green)" };
+    if (score >= 45) return { label: "Fair trust", color: "var(--accent)" };
+    if (score >= 20) return { label: "Low trust", color: "var(--amber)" };
+    return { label: "Very low trust", color: "var(--red)" };
+  }
+
   document.getElementById("generateBtn").addEventListener("click", async () => {
     const btn = document.getElementById("generateBtn");
     const resultEl = document.getElementById("result");
@@ -1489,7 +1616,21 @@
     const token = AppState.beginRequest("generateSignal");
 
     btn.disabled = true;
-    btn.textContent = "Generating...";
+    btn.textContent = "Connecting…";
+    // Staged, honest progression — each label roughly tracks a real
+    // phase of the request (network round-trip, then the backend's own
+    // fetch/analyze/generate pipeline — see app/main.py's
+    // /generate-signal). Times are paced for a typical warm-server
+    // response (under ~1-2s total); the final stage explicitly names
+    // the known Render free-tier cold-start case rather than leaving
+    // the user guessing why a first-of-the-day request is taking
+    // longer.
+    const stopStagedHint = attachStagedLoadingHint(btn, [
+      { text: "Fetching fresh market data…", afterMs: 600 },
+      { text: "Analyzing market structure…", afterMs: 1800 },
+      { text: "Confirming indicators…", afterMs: 3200 },
+      { text: "Still working — first request of the day can take up to 50s while the server wakes up…", afterMs: 6000 },
+    ]);
     try {
       const res = await fetch(`${BACKEND_URL}/generate-signal`, {
         method: "POST",
@@ -1528,6 +1669,17 @@
             <span class="confidence-tier" style="color:${tier.color}">${tier.label}</span>
             <span class="confidence-pct">(${data.confidence}% indicator agreement)</span>
           </div>
+          ${data.quality_score != null ? (() => {
+            const qTier = qualityTier(data.quality_score);
+            return `
+          <div class="quality-score-row" title="A distinct, deliberately harsher trust score — factors in data completeness and indicator agreement breadth, not just confidence alone.">
+            <span class="quality-score-label">Quality Score</span>
+            <div class="quality-score-track">
+              <div class="quality-score-fill" style="width:${data.quality_score}%;background:${qTier.color}"></div>
+            </div>
+            <span class="quality-score-value" style="color:${qTier.color}">${data.quality_score}</span>
+          </div>`;
+          })() : ""}
           <div class="volatility-badge" style="margin-top:6px;font-size:12px;color:${volColor}">
             Volatility: ${data.volatility_label}${data.volatility_pct != null ? ` (band width ${data.volatility_pct}%)` : ""}
           </div>
@@ -1568,11 +1720,16 @@
       // newer one started must not flip the button back to idle while
       // that newer request is still pending.
       if (AppState.isCurrent("generateSignal", token)) {
+        stopStagedHint();
         btn.disabled = false;
         btn.textContent = "Generate Signal";
       }
     }
   });
+  attachEnterToSubmit(
+    [document.getElementById("asset"), document.getElementById("duration")],
+    () => document.getElementById("generateBtn").click()
+  );
 
   init();
 
