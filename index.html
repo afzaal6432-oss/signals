@@ -1102,54 +1102,66 @@
   // ---------- How To Use: professional video-card system ----------
   // Each entry names a local file under ./videos/ (see
   // clients/web/videos/README.md) — never an external/stock URL. A card
-  // whose file doesn't exist yet (true right now, for all six) shows an
-  // honest "Video coming soon" state instead of a broken player; drop a
-  // matching file in ./videos/ later and the same card starts playing it
-  // with no code changes. durationLabel is optional — omit it (as every
-  // entry does today) until a real video with a known length exists.
-  const HOW_TO_VIDEOS = [
-    {
-      id: "getting-started",
-      title: "Getting Started",
-      description: "Adding your license key, signing in, and a quick tour of the dashboard.",
-      src: "./videos/getting-started.mp4",
-    },
-    {
-      id: "how-signals-work",
-      title: "How Signals Work",
-      description: "What the engine checks behind the scenes and how it turns that into a call.",
-      src: "./videos/how-signals-work.mp4",
-    },
-    {
-      id: "how-to-read-a-signal",
-      title: "How to Read a Signal",
-      description: "Understanding BUY / SELL / WAIT, the confidence percentage, and the volatility badge.",
-      src: "./videos/how-to-read-a-signal.mp4",
-    },
-    {
-      id: "how-to-use-the-platform",
-      title: "How to Use the Platform",
-      description: "Choosing an asset and duration, and using Premium Signal alerts.",
-      src: "./videos/how-to-use-the-platform.mp4",
-    },
-    {
-      id: "how-to-manage-your-subscription",
-      title: "How to Manage Your Subscription",
-      description: "Checking your plan status, renewing, and what happens while a payment is reviewed.",
-      src: "./videos/how-to-manage-your-subscription.mp4",
-    },
-    {
-      id: "how-referral-links-work",
-      title: "How Referral/Affiliate Links Work",
-      description: "Sharing your link, tracking clicks and signups, and requesting a payout.",
-      src: "./videos/how-referral-links-work.mp4",
-    },
-  ];
+  // Admin-managed tutorial videos (see app/admin_dashboard.py's
+  // /system/settings/how-to-videos) — fetched fresh each time this
+  // screen loads rather than hardcoded, so adding/removing a video
+  // from the admin dashboard shows up immediately with no code
+  // changes or redeploy. Replaces a previous hardcoded list of six
+  // entries pointing at local video files that never actually
+  // existed, which meant every single visitor just saw six
+  // permanently-broken-looking "coming soon" cards.
+  let HOW_TO_VIDEOS = [];
 
   const PLAY_ICON_SVG = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z"/></svg>';
 
+  // Recognizes youtube.com/watch, youtu.be, youtube.com/shorts, and
+  // already-an-embed-URL forms, and returns the canonical embeddable
+  // URL — or null if this isn't a YouTube URL at all (in which case
+  // the caller treats it as a direct video file URL instead).
+  function youTubeEmbedUrl(url) {
+    try {
+      const u = new URL(url);
+      const host = u.hostname.replace(/^www\./, "");
+      if (host === "youtu.be") {
+        const id = u.pathname.slice(1);
+        return id ? `https://www.youtube.com/embed/${id}` : null;
+      }
+      if (host === "youtube.com" || host === "m.youtube.com") {
+        if (u.pathname === "/watch") {
+          const id = u.searchParams.get("v");
+          return id ? `https://www.youtube.com/embed/${id}` : null;
+        }
+        if (u.pathname.startsWith("/embed/")) return url;
+        if (u.pathname.startsWith("/shorts/")) {
+          const id = u.pathname.split("/")[2];
+          return id ? `https://www.youtube.com/embed/${id}` : null;
+        }
+      }
+    } catch (e) { /* not a valid URL at all — treated as non-YouTube below */ }
+    return null;
+  }
+
+  async function loadHowToVideos() {
+    const grid = document.getElementById("howToVideoGrid");
+    grid.innerHTML = `<div class="sub">Loading videos…</div>`;
+    try {
+      const res = await fetch(`${BACKEND_URL}/how-to-videos`);
+      if (!res.ok) throw new Error(`Backend returned ${res.status}`);
+      const data = await res.json();
+      HOW_TO_VIDEOS = Array.isArray(data.videos) ? data.videos : [];
+    } catch (e) {
+      grid.innerHTML = `<div class="sub">${AppErrors.friendly("how_to_videos", e)}</div>`;
+      return;
+    }
+    renderHowToVideos();
+  }
+
   function renderHowToVideos() {
     const grid = document.getElementById("howToVideoGrid");
+    if (!HOW_TO_VIDEOS.length) {
+      grid.innerHTML = `<div class="sub">No tutorial videos yet — check back soon.</div>`;
+      return;
+    }
     grid.innerHTML = HOW_TO_VIDEOS.map((v, i) => `
       <div class="card video-card">
         <div class="video-frame" id="videoFrame-${v.id}" data-state="idle">
@@ -1160,9 +1172,8 @@
         <div class="video-card-body">
           <div class="video-card-title">
             <span>${i + 1}. ${v.title}</span>
-            ${v.durationLabel ? `<span class="video-card-duration">${v.durationLabel}</span>` : ""}
           </div>
-          <div class="video-card-desc">${v.description}</div>
+          <div class="video-card-desc">${v.description || ""}</div>
         </div>
       </div>
     `).join("");
@@ -1172,9 +1183,9 @@
 
   // Per-card state machine: idle (poster + play button) -> loading
   // (spinner, video element attached and fetching) -> playing (native
-  // controls take over), or idle -> error ("coming soon", clicking again
-  // retries — harmless since a since-added real file would then load
-  // normally).
+  // controls take over, or an embedded YouTube player), or idle ->
+  // error (clicking again retries — harmless, since a fixed URL would
+  // then load normally).
   function initVideoCard(v) {
     const frame = document.getElementById(`videoFrame-${v.id}`);
     const playBtn = document.getElementById(`videoPlayBtn-${v.id}`);
@@ -1194,7 +1205,7 @@
         frame.innerHTML = `
           <div class="video-state">
             <span class="video-state-icon">🎬</span>
-            <span>Video coming soon</span>
+            <span>Couldn't load this video</span>
           </div>`;
       } else if (state === "playing") {
         frame.innerHTML = extraHtml;
@@ -1202,17 +1213,29 @@
     }
 
     function startPlayback() {
+      const embedUrl = youTubeEmbedUrl(v.url);
+      if (embedUrl) {
+        // YouTube handles its own loading/buffering UI — just embed it
+        // directly rather than routing through the loading/error
+        // states meant for a raw <video> element fetching a file.
+        setState("playing", `
+          <iframe
+            src="${embedUrl}?autoplay=1&rel=0"
+            title="${v.title}" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+            style="width:100%;height:100%;border:0"
+          ></iframe>`);
+        return;
+      }
+
       setState("loading");
       const videoEl = document.createElement("video");
       videoEl.controls = true;
       videoEl.autoplay = true;
       videoEl.playsInline = true; // required for autoplay-on-tap to work on iOS Safari rather than forcing fullscreen
       videoEl.setAttribute("aria-label", v.title);
-
-      const sources = [v.src.replace(/\.mp4$/, ".webm"), v.src]
-        .map((src) => `<source src="${src}" type="video/${src.endsWith(".webm") ? "webm" : "mp4"}">`)
-        .join("");
-      videoEl.innerHTML = sources;
+      videoEl.src = v.url;
 
       videoEl.addEventListener("canplay", () => {
         if (frame.dataset.state !== "loading") return; // a fast error already fired for this same attempt — don't fight it
@@ -1223,7 +1246,7 @@
       }, { once: true });
 
       videoEl.addEventListener("error", () => {
-        console.error(`[how-to-video] "${v.id}" failed to load (expected at ${v.src} — see clients/web/videos/README.md)`);
+        console.error(`[how-to-video] "${v.id}" failed to load (${v.url})`);
         setState("error");
       }, { once: true });
 
@@ -1238,7 +1261,7 @@
 
   // ---------- How To Use ----------
   function initHowTo() {
-    renderHowToVideos();
+    loadHowToVideos();
     document.getElementById("howToBtn").addEventListener("click", () => showScreen("howToScreen"));
     document.getElementById("backFromHowToBtn").addEventListener("click", () => showScreen("signalCenterScreen"));
   }

@@ -430,6 +430,26 @@
         </div>
 
         <div class="card">
+          <h3 style="margin-top:0">How-to videos</h3>
+          <div class="sub">Shown on the app's "How to use" screen. Paste a YouTube link (recommended — no video hosting needed on your end) or a direct video file URL.</div>
+          <div class="row" style="margin-top:10px">
+            <div><input id="howToVideoTitle" placeholder="Title, e.g. Getting Started"></div>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <div><input id="howToVideoUrl" placeholder="https://www.youtube.com/watch?v=..."></div>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <div><input id="howToVideoDescription" placeholder="Short description (optional)"></div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div style="flex: 0 0 auto"><button onclick="addHowToVideo()">Add video</button></div>
+          </div>
+          <div id="howToVideoError" class="error"></div>
+          <div id="howToVideoSuccess" class="success-msg"></div>
+          <div id="howToVideoList" style="margin-top:14px"></div>
+        </div>
+
+        <div class="card">
           <h3 style="margin-top:0">Market data API key</h3>
           <div class="sub">Current: <span id="currentKeyMasked">loading...</span></div>
           <div class="row" style="margin-top:10px">
@@ -1038,7 +1058,65 @@
     document.getElementById("settingPlans").textContent = d.plans.join(", ") || "—";
     document.getElementById("currentKeyMasked").textContent = d.market_data_api_key_masked;
     document.getElementById("siteNoticeInput").value = d.site_notice || "";
+    renderHowToVideoList(d.how_to_videos || []);
     await loadPaymentSettings();
+  }
+
+  function renderHowToVideoList(videos) {
+    const listEl = document.getElementById("howToVideoList");
+    if (!videos.length) {
+      listEl.innerHTML = `<div class="sub">No videos added yet.</div>`;
+      return;
+    }
+    listEl.innerHTML = videos.map(v => `
+      <div class="kv" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div>
+          <b>${v.title}</b> — <a href="${v.url}" target="_blank" rel="noopener">${v.url}</a>
+          ${v.description ? `<div class="sub">${v.description}</div>` : ""}
+        </div>
+        <div style="flex:0 0 auto"><button onclick="deleteHowToVideo('${v.id}')">Remove</button></div>
+      </div>
+    `).join("");
+  }
+
+  async function addHowToVideo() {
+    const errorEl = document.getElementById("howToVideoError");
+    const successEl = document.getElementById("howToVideoSuccess");
+    errorEl.textContent = "";
+    successEl.textContent = "";
+    const title = document.getElementById("howToVideoTitle").value.trim();
+    const url = document.getElementById("howToVideoUrl").value.trim();
+    const description = document.getElementById("howToVideoDescription").value.trim();
+    if (!title || !url) {
+      errorEl.textContent = "Title and URL are both required.";
+      return;
+    }
+    try {
+      const data = await api("/admin/system/settings/how-to-videos", {
+        method: "POST", body: JSON.stringify({ title, url, description }),
+      });
+      renderHowToVideoList(data.videos);
+      document.getElementById("howToVideoTitle").value = "";
+      document.getElementById("howToVideoUrl").value = "";
+      document.getElementById("howToVideoDescription").value = "";
+      successEl.textContent = "Video added — live on the app immediately.";
+    } catch (e) {
+      errorEl.textContent = e.message;
+    }
+  }
+
+  async function deleteHowToVideo(videoId) {
+    const errorEl = document.getElementById("howToVideoError");
+    const successEl = document.getElementById("howToVideoSuccess");
+    errorEl.textContent = "";
+    successEl.textContent = "";
+    try {
+      const data = await api(`/admin/system/settings/how-to-videos/${encodeURIComponent(videoId)}`, { method: "DELETE" });
+      renderHowToVideoList(data.videos);
+      successEl.textContent = "Video removed.";
+    } catch (e) {
+      errorEl.textContent = e.message;
+    }
   }
 
   async function updateSiteNotice() {
